@@ -23,14 +23,20 @@ export function AuthProvider({ children }) {
         if (user) {
           const { data: userDoc } = await supabase
             .from('users')
-            .select('role')
+            .select('role, is_blocked')
             .eq('id', user.id)
             .maybeSingle()
           
-          if (userDoc?.role) {
-            setUserRole(userDoc.role)
-          } else if (user.user_metadata?.role) {
-            setUserRole(user.user_metadata.role)
+          if (userDoc?.is_blocked) {
+            await supabase.auth.signOut()
+            setCurrentUser(null)
+            setUserRole(null)
+          } else {
+            if (userDoc?.role) {
+              setUserRole(userDoc.role)
+            } else if (user.user_metadata?.role) {
+              setUserRole(user.user_metadata.role)
+            }
           }
         } else {
           setUserRole(null)
@@ -51,14 +57,20 @@ export function AuthProvider({ children }) {
       if (user) {
         const { data: userDoc } = await supabase
           .from('users')
-          .select('role')
+          .select('role, is_blocked')
           .eq('id', user.id)
           .maybeSingle()
 
-        if (userDoc?.role) {
-          setUserRole(userDoc.role)
-        } else if (user.user_metadata?.role) {
-          setUserRole(user.user_metadata.role)
+        if (userDoc?.is_blocked) {
+          await supabase.auth.signOut()
+          setCurrentUser(null)
+          setUserRole(null)
+        } else {
+          if (userDoc?.role) {
+            setUserRole(userDoc.role)
+          } else if (user.user_metadata?.role) {
+            setUserRole(user.user_metadata.role)
+          }
         }
       } else {
         setUserRole(null)
@@ -133,9 +145,14 @@ export function AuthProvider({ children }) {
     if (data.user) {
       const { data: userDoc } = await supabase
         .from('users')
-        .select('role')
+        .select('role, is_blocked')
         .eq('id', data.user.id)
         .maybeSingle()
+
+      if (userDoc?.is_blocked) {
+        await supabase.auth.signOut()
+        throw new Error('Your account has been blocked or deleted by an administrator.')
+      }
 
       if (userDoc?.role) {
         setUserRole(userDoc.role)

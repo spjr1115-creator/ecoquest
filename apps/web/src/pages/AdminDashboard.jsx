@@ -14,7 +14,9 @@ import {
   X,
   Download,
   Trash2,
-  ChevronRight
+  ChevronRight,
+  Lock,
+  Unlock
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 
@@ -155,6 +157,57 @@ export default function AdminDashboard() {
 
       // Update local state
       setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u))
+    } catch (err) {
+      console.error('Error:', err)
+    }
+  }
+
+  async function handleToggleBlock(userId, currentBlockedStatus) {
+    if (userId === currentUser?.id) {
+      alert("You cannot block yourself.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.rpc('admin_block_user', {
+        p_user_id: userId,
+        p_blocked: !currentBlockedStatus
+      })
+
+      if (error) {
+        console.error('Error toggling block status:', error)
+        alert('Failed to update block status.');
+        return;
+      }
+
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, is_blocked: !currentBlockedStatus } : u))
+    } catch (err) {
+      console.error('Error:', err)
+    }
+  }
+
+  async function handleDeleteUser(userId) {
+    if (userId === currentUser?.id) {
+      alert("You cannot delete yourself.");
+      return;
+    }
+
+    if (!window.confirm("Are you sure you want to delete this user? This action will block their access and mark them as deleted.")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.rpc('admin_delete_user', {
+        p_user_id: userId
+      })
+
+      if (error) {
+        console.error('Error deleting user:', error)
+        alert('Failed to delete user.');
+        return;
+      }
+
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, is_blocked: true, name: 'Deleted User' } : u))
     } catch (err) {
       console.error('Error:', err)
     }
@@ -383,12 +436,15 @@ export default function AdminDashboard() {
                     <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Email</th>
                     <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Current Role</th>
                     <th className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Change Role</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
                   {allUsers.map(u => (
-                    <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{u.name}</td>
+                    <tr key={u.id} className={`transition-colors ${u.is_blocked ? 'bg-red-50 opacity-75' : 'hover:bg-slate-50'}`}>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
+                        {u.name} {u.is_blocked && <span className="ml-2 text-xs text-red-600 font-bold">(Blocked)</span>}
+                      </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-500">{u.email}</td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : u.role === 'teacher' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
@@ -399,13 +455,33 @@ export default function AdminDashboard() {
                         <select 
                           value={u.role}
                           onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                          disabled={u.id === currentUser?.id}
+                          disabled={u.id === currentUser?.id || u.is_blocked}
                           className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <option value="student">Student</option>
                           <option value="teacher">Teacher</option>
                           <option value="admin">Admin</option>
                         </select>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex justify-end space-x-2">
+                          <button 
+                            onClick={() => handleToggleBlock(u.id, u.is_blocked)}
+                            disabled={u.id === currentUser?.id}
+                            className={`p-1.5 rounded-lg transition-colors ${u.is_blocked ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-orange-100 text-orange-600 hover:bg-orange-200'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                            title={u.is_blocked ? "Unblock User" : "Block User"}
+                          >
+                            {u.is_blocked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteUser(u.id)}
+                            disabled={u.id === currentUser?.id || u.name === 'Deleted User'}
+                            className="p-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Delete User"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

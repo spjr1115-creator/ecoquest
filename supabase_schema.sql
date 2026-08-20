@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   impact_score INTEGER DEFAULT 0,
   streak INTEGER DEFAULT 0,
   badges JSONB DEFAULT '[]'::jsonb,
+  is_blocked BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -201,3 +202,64 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.update_user_role(UUID, TEXT) TO authenticated;
+
+-- Function to securely block/unblock users
+CREATE OR REPLACE FUNCTION public.admin_block_user(p_user_id UUID, p_blocked BOOLEAN)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  -- Ensure the caller is an admin
+  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin') THEN
+    RAISE EXCEPTION 'Only administrators can block or unblock users';
+  END IF;
+
+  -- Prevent an admin from blocking themselves
+  IF p_user_id = auth.uid() THEN
+    RAISE EXCEPTION 'Administrators cannot block themselves.';
+  END IF;
+
+  UPDATE public.users SET is_blocked = p_blocked WHERE id = p_user_id;
+  
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'User not found';
+  END IF;
+
+  RETURN jsonb_build_object('success', true, 'user_id', p_user_id, 'is_blocked', p_blocked);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_block_user(UUID, BOOLEAN) TO authenticated;
+
+-- Function to securely delete (soft delete/block) users
+CREATE OR REPLACE FUNCTION public.admin_delete_user(p_user_id UUID)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  -- Ensure the caller is an admin
+  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin') THEN
+    RAISE EXCEPTION 'Only administrators can delete users';
+  END IF;
+
+  -- Prevent an admin from deleting themselves
+  IF p_user_id = auth.uid() THEN
+    RAISE EXCEPTION 'Administrators cannot delete themselves.';
+  END IF;
+
+  -- Soft delete by marking as blocked (could also clear PII here if needed)
+  UPDATE public.users SET is_blocked = true, name = 'Deleted User' WHERE id = p_user_id;
+  
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'User not found';
+  END IF;
+
+  RETURN jsonb_build_object('success', true, 'user_id', p_user_id, 'deleted', true);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_delete_user(UUID) TO authenticated;
