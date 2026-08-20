@@ -203,11 +203,11 @@ export default function AdminDashboard() {
 
       if (error) {
         console.error('Error deleting user:', error)
-        alert('Failed to delete user.');
+        alert('Failed to delete user. Make sure you have run the updated SQL schema in Supabase.');
         return;
       }
 
-      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, is_blocked: true, name: 'Deleted User' } : u))
+      setAllUsers(prev => prev.filter(u => u.id !== userId))
     } catch (err) {
       console.error('Error:', err)
     }

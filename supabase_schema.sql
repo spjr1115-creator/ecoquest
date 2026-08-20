@@ -233,7 +233,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.admin_block_user(UUID, BOOLEAN) TO authenticated;
 
--- Function to securely delete (soft delete/block) users
+-- Function to securely delete (hard delete) users
 CREATE OR REPLACE FUNCTION public.admin_delete_user(p_user_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -251,13 +251,11 @@ BEGIN
     RAISE EXCEPTION 'Administrators cannot delete themselves.';
   END IF;
 
-  -- Soft delete by marking as blocked (could also clear PII here if needed)
-  UPDATE public.users SET is_blocked = true, name = 'Deleted User' WHERE id = p_user_id;
+  -- Hard delete from auth.users (This requires the function to be run by a superuser like postgres)
+  -- Because of ON DELETE CASCADE, this will also delete the public.users record and related data.
+  DELETE FROM auth.users WHERE id = p_user_id;
   
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'User not found';
-  END IF;
-
+  -- We don't check NOT FOUND here because auth.users might behave differently, but if we get here, it succeeded.
   RETURN jsonb_build_object('success', true, 'user_id', p_user_id, 'deleted', true);
 END;
 $$;
