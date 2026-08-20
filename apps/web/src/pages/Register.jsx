@@ -24,6 +24,21 @@ export default function Register() {
     return '/dashboard/student'
   }
 
+  const getPasswordStrength = (password) => {
+    if (!password) return { label: '', color: 'bg-slate-200', textColor: 'text-slate-500', width: '0%' };
+    let score = 0;
+    if (password.length >= 6) score += 1;
+    if (password.length >= 8) score += 1;
+    if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
+    if (/\d/.test(password)) score += 1;
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
+
+    if (score < 2) return { label: 'Weak', color: 'bg-red-500', textColor: 'text-red-500', width: '33%' };
+    if (score < 4) return { label: 'Medium', color: 'bg-yellow-500', textColor: 'text-yellow-600', width: '66%' };
+    return { label: 'Strong', color: 'bg-green-500', textColor: 'text-green-600', width: '100%' };
+  }
+
+
   if (currentUser) {
     navigate(getDashboardPath(userRole), { replace: true })
   }
@@ -234,6 +249,27 @@ export default function Register() {
                     placeholder="••••••••"
                   />
                 </div>
+                {formData.password && (
+                  <div className="mt-2 animate-in fade-in slide-in-from-top-1">
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-xs font-semibold text-slate-500">Password strength</span>
+                      <span className={`text-xs font-bold ${getPasswordStrength(formData.password).textColor}`}>
+                        {getPasswordStrength(formData.password).label}
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full transition-all duration-500 ease-out ${getPasswordStrength(formData.password).color}`} 
+                        style={{ width: getPasswordStrength(formData.password).width }}
+                      ></div>
+                    </div>
+                    {getPasswordStrength(formData.password).label !== 'Strong' && (
+                      <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                        Tip: Use 8+ characters with a mix of letters, numbers & symbols for a strong password.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
