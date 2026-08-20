@@ -249,38 +249,36 @@ export default function Register() {
                     placeholder="••••••••"
                   />
                 </div>
-                {formData.password && (
-                  <div className="mt-2 animate-in fade-in slide-in-from-top-1">
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-xs font-semibold text-slate-500">Password strength</span>
-                      <span className={`text-xs font-bold ${getPasswordStrength(formData.password).textColor}`}>
-                        {getPasswordStrength(formData.password).label}
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full transition-all duration-500 ease-out ${getPasswordStrength(formData.password).color}`} 
-                        style={{ width: getPasswordStrength(formData.password).width }}
-                      ></div>
-                    </div>
-                    {getPasswordStrength(formData.password).label !== 'Strong' && (
-                      <ul className="text-[11px] text-slate-500 mt-2.5 space-y-1.5">
-                        <li className="flex items-center gap-2">
-                           <div className={`h-1.5 w-1.5 rounded-full ${formData.password.length >= 8 ? 'bg-green-500' : 'bg-slate-300'}`}></div>
-                           At least 8 characters
-                        </li>
-                        <li className="flex items-center gap-2">
-                           <div className={`h-1.5 w-1.5 rounded-full ${/[A-Z]/.test(formData.password) && /[a-z]/.test(formData.password) ? 'bg-green-500' : 'bg-slate-300'}`}></div>
-                           Uppercase & lowercase letters
-                        </li>
-                        <li className="flex items-center gap-2">
-                           <div className={`h-1.5 w-1.5 rounded-full ${/\d/.test(formData.password) && /[^A-Za-z0-9]/.test(formData.password) ? 'bg-green-500' : 'bg-slate-300'}`}></div>
-                           Numbers & symbols
-                        </li>
-                      </ul>
-                    )}
+                <div className="mt-2 animate-in fade-in slide-in-from-top-1">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-xs font-semibold text-slate-500">Password strength</span>
+                    <span className={`text-xs font-bold ${getPasswordStrength(formData.password).textColor}`}>
+                      {getPasswordStrength(formData.password).label}
+                    </span>
                   </div>
-                )}
+                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-500 ease-out ${getPasswordStrength(formData.password).color}`} 
+                      style={{ width: getPasswordStrength(formData.password).width }}
+                    ></div>
+                  </div>
+                  {getPasswordStrength(formData.password).label !== 'Strong' && (
+                    <ul className="text-[11px] text-slate-500 mt-2.5 space-y-1.5">
+                      <li className="flex items-center gap-2">
+                         <div className={`h-1.5 w-1.5 rounded-full ${formData.password.length >= 8 ? 'bg-green-500' : 'bg-slate-300'}`}></div>
+                         At least 8 characters
+                      </li>
+                      <li className="flex items-center gap-2">
+                         <div className={`h-1.5 w-1.5 rounded-full ${/[A-Z]/.test(formData.password) && /[a-z]/.test(formData.password) ? 'bg-green-500' : 'bg-slate-300'}`}></div>
+                         Uppercase & lowercase letters
+                      </li>
+                      <li className="flex items-center gap-2">
+                         <div className={`h-1.5 w-1.5 rounded-full ${/\d/.test(formData.password) && /[^A-Za-z0-9]/.test(formData.password) ? 'bg-green-500' : 'bg-slate-300'}`}></div>
+                         Numbers & symbols
+                      </li>
+                    </ul>
+                  )}
+                </div>
               </div>
 
               <div>
