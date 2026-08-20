@@ -264,9 +264,20 @@ export default function Register() {
                       ></div>
                     </div>
                     {getPasswordStrength(formData.password).label !== 'Strong' && (
-                      <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-                        Tip: Use 8+ characters with a mix of letters, numbers & symbols for a strong password.
-                      </p>
+                      <ul className="text-[11px] text-slate-500 mt-2.5 space-y-1.5">
+                        <li className="flex items-center gap-2">
+                           <div className={`h-1.5 w-1.5 rounded-full ${formData.password.length >= 8 ? 'bg-green-500' : 'bg-slate-300'}`}></div>
+                           At least 8 characters
+                        </li>
+                        <li className="flex items-center gap-2">
+                           <div className={`h-1.5 w-1.5 rounded-full ${/[A-Z]/.test(formData.password) && /[a-z]/.test(formData.password) ? 'bg-green-500' : 'bg-slate-300'}`}></div>
+                           Uppercase & lowercase letters
+                        </li>
+                        <li className="flex items-center gap-2">
+                           <div className={`h-1.5 w-1.5 rounded-full ${/\d/.test(formData.password) && /[^A-Za-z0-9]/.test(formData.password) ? 'bg-green-500' : 'bg-slate-300'}`}></div>
+                           Numbers & symbols
+                        </li>
+                      </ul>
                     )}
                   </div>
                 )}
