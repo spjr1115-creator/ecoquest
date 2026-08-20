@@ -167,3 +167,37 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.review_submission(UUID, TEXT) TO authenticated;
+
+-- Function to securely update user roles
+CREATE OR REPLACE FUNCTION public.update_user_role(p_user_id UUID, p_new_role TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF p_new_role NOT IN ('student', 'teacher', 'admin') THEN
+    RAISE EXCEPTION 'Invalid role specified';
+  END IF;
+
+  -- Ensure the caller is an admin
+  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin') THEN
+    RAISE EXCEPTION 'Only administrators can change user roles';
+  END IF;
+
+  -- Prevent an admin from accidentally revoking their own admin rights
+  IF p_user_id = auth.uid() AND p_new_role <> 'admin' THEN
+    RAISE EXCEPTION 'Administrators cannot demote themselves. Ask another admin to do it.';
+  END IF;
+
+  UPDATE public.users SET role = p_new_role WHERE id = p_user_id;
+  
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'User not found';
+  END IF;
+
+  RETURN jsonb_build_object('success', true, 'user_id', p_user_id, 'new_role', p_new_role);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.update_user_role(UUID, TEXT) TO authenticated;

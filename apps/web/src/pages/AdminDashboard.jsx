@@ -135,6 +135,31 @@ export default function AdminDashboard() {
     setShowSettingsModal(false)
   }
 
+  async function handleRoleChange(userId, newRole) {
+    if (userId === currentUser?.id && newRole !== 'admin') {
+      alert("You cannot revoke your own admin rights.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.rpc('update_user_role', {
+        p_user_id: userId,
+        p_new_role: newRole
+      })
+
+      if (error) {
+        console.error('Error updating role:', error)
+        alert('Failed to update role. Are you sure you ran the SQL function in Supabase?');
+        return;
+      }
+
+      // Update local state
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u))
+    } catch (err) {
+      console.error('Error:', err)
+    }
+  }
+
   function downloadReport() {
     const headers = 'Name,Email,Role,XP,Impact Score,Level\n'
     const rows = allUsers.map(u => `${u.name},${u.email},${u.role},${u.xp || 0},${u.impact_score || 0},${u.level || 1}`).join('\n')
@@ -345,7 +370,7 @@ export default function AdminDashboard() {
       {/* Manage Users Modal */}
       {showUsersModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[80vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl relative max-h-[80vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-slate-900">Manage Users</h3>
               <button onClick={() => setShowUsersModal(false)} className="p-1 hover:bg-slate-100 rounded-lg transition-colors"><X className="h-5 w-5 text-slate-400 hover:text-slate-600"/></button>
@@ -356,7 +381,8 @@ export default function AdminDashboard() {
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Name</th>
                     <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Email</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Role</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Current Role</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Change Role</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
@@ -369,13 +395,22 @@ export default function AdminDashboard() {
                           {u.role.toUpperCase()}
                         </span>
                       </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
+                        <select 
+                          value={u.role}
+                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                          disabled={u.id === currentUser?.id}
+                          className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <option value="student">Student</option>
+                          <option value="teacher">Teacher</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <p className="text-xs text-slate-500 font-medium">To edit user roles securely, execute the RLS policy update in your Supabase SQL editor.</p>
-              </div>
             </div>
           </div>
         </div>

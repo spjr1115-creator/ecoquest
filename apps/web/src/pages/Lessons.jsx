@@ -32,6 +32,7 @@ export default function Lessons() {
           setLessons(data)
           return
         }
+        
       } catch (error) {
         console.error('Error fetching lessons from Supabase:', error)
       } finally {
