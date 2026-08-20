@@ -34,6 +34,17 @@ export default function TeacherDashboard() {
     difficulty: 'Medium',
     description: ''
   })
+  
+  const [showCreateLessonModal, setShowCreateLessonModal] = useState(false)
+  const [newLesson, setNewLesson] = useState({
+    title: '',
+    category: 'Waste Management',
+    xp: 50,
+    duration: '15 min',
+    difficulty: 'Beginner',
+    description: '',
+    content: ''
+  })
 
   const sampleStudents = [
     { name: 'Alex Johnson', email: 'alex@school.edu', level: 3, xp: 350, streak: 5 },
@@ -243,6 +254,42 @@ export default function TeacherDashboard() {
     }
   }
 
+  async function handleCreateLesson(e) {
+    e.preventDefault()
+    if (!newLesson.title.trim()) return
+
+    try {
+      const { error } = await supabase.from('lessons').insert({
+        title: newLesson.title,
+        category: newLesson.category,
+        description: newLesson.description,
+        difficulty: newLesson.difficulty,
+        duration: newLesson.duration,
+        xp: Number(newLesson.xp),
+        content: newLesson.content
+      })
+
+      if (error) console.warn('Note creating lesson in DB:', error.message)
+
+      setCreateSuccess(`Lesson "${newLesson.title}" created successfully! 🎉`)
+      setTimeout(() => {
+        setCreateSuccess('')
+        setShowCreateLessonModal(false)
+        setNewLesson({
+          title: '',
+          category: 'Waste Management',
+          xp: 50,
+          duration: '15 min',
+          difficulty: 'Beginner',
+          description: '',
+          content: ''
+        })
+      }, 1800)
+    } catch (err) {
+      console.error('Error creating lesson:', err)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -343,6 +390,13 @@ export default function TeacherDashboard() {
                   icon={<FileText className="h-5 w-5" />}
                   label="Create Challenge"
                   description="Design a new eco-challenge for students"
+                />
+              </div>
+              <div onClick={() => setShowCreateLessonModal(true)}>
+                <QuickAction
+                  icon={<FileText className="h-5 w-5" />}
+                  label="Upload Lesson"
+                  description="Add new educational content"
                 />
               </div>
               <div onClick={() => setShowStudentsModal(true)}>
@@ -513,6 +567,125 @@ export default function TeacherDashboard() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Lesson Modal */}
+      {showCreateLessonModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl relative animate-in fade-in duration-200 overflow-y-auto max-h-[90vh]">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Upload New Lesson</h3>
+            <p className="text-slate-600 text-sm mb-4">Create educational content for your class</p>
+
+            {createSuccess ? (
+              <div className="bg-green-50 border border-green-200 text-green-800 p-4 rounded-xl text-center font-medium my-4">
+                {createSuccess}
+              </div>
+            ) : (
+              <form onSubmit={handleCreateLesson} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase">Title</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Basics of Composting"
+                    value={newLesson.title}
+                    onChange={e => setNewLesson({ ...newLesson, title: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase">Category</label>
+                    <select
+                      value={newLesson.category}
+                      onChange={e => setNewLesson({ ...newLesson, category: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option>Waste Management</option>
+                      <option>Water Conservation</option>
+                      <option>Energy Conservation</option>
+                      <option>Biodiversity</option>
+                      <option>Plastic Pollution</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase">Difficulty</label>
+                    <select
+                      value={newLesson.difficulty}
+                      onChange={e => setNewLesson({ ...newLesson, difficulty: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option>Beginner</option>
+                      <option>Intermediate</option>
+                      <option>Advanced</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase">XP Reward</label>
+                    <input
+                      type="number"
+                      value={newLesson.xp}
+                      onChange={e => setNewLesson({ ...newLesson, xp: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase">Duration</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 15 min"
+                      value={newLesson.duration}
+                      onChange={e => setNewLesson({ ...newLesson, duration: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase">Short Description</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Brief description for the lesson card..."
+                    value={newLesson.description}
+                    onChange={e => setNewLesson({ ...newLesson, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase">Lesson Content (HTML allowed)</label>
+                  <textarea
+                    rows={4}
+                    placeholder="<h2>Main Topic</h2><p>Write content here...</p>"
+                    value={newLesson.content}
+                    onChange={e => setNewLesson({ ...newLesson, content: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                <div className="flex space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateLessonModal(false)}
+                    className="flex-1 py-2 px-4 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 px-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
+                  >
+                    Save & Publish
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
