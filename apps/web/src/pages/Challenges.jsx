@@ -47,6 +47,36 @@ export default function Challenges() {
     }
 
     fetchChallenges()
+
+    const channel = supabase
+      .channel('public:challenges')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'challenges' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          if (payload.new.status === 'active') {
+            setChallenges(prev => [payload.new, ...prev])
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          if (payload.new.status === 'active') {
+            setChallenges(prev => {
+              const exists = prev.some(c => c.id === payload.new.id)
+              if (exists) {
+                return prev.map(c => c.id === payload.new.id ? payload.new : c)
+              } else {
+                return [payload.new, ...prev]
+              }
+            })
+          } else {
+            setChallenges(prev => prev.filter(c => c.id !== payload.new.id))
+          }
+        } else if (payload.eventType === 'DELETE') {
+          setChallenges(prev => prev.filter(c => c.id !== payload.old.id))
+        }
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const filteredChallenges = useMemo(() => {

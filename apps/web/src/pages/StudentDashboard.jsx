@@ -105,6 +105,25 @@ export default function StudentDashboard() {
     }
 
     fetchDashboardData()
+
+    const channel1 = supabase
+      .channel('public:user_challenges:student')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_challenges', filter: `user_id=eq.${currentUser?.id}` }, () => {
+        fetchDashboardData()
+      })
+      .subscribe()
+
+    const channel2 = supabase
+      .channel('public:challenges:student')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'challenges' }, () => {
+        fetchDashboardData()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel1)
+      supabase.removeChannel(channel2)
+    }
   }, [currentUser])
 
   async function handleLogAction() {

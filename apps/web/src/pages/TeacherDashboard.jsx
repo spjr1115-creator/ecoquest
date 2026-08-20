@@ -149,6 +149,18 @@ export default function TeacherDashboard() {
     }
 
     fetchDashboardData()
+
+    const channel = supabase
+      .channel('public:user_challenges:teacher')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_challenges' }, (payload) => {
+        // Re-fetch data on any changes to keep stats and pending lists perfectly in sync
+        fetchDashboardData()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [currentUser])
 
   async function handleVerification(submissionId, status) {

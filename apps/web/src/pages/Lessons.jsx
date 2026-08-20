@@ -40,6 +40,23 @@ export default function Lessons() {
     }
 
     fetchLessons()
+
+    const channel = supabase
+      .channel('public:lessons')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lessons' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setLessons(prev => [payload.new, ...prev])
+        } else if (payload.eventType === 'UPDATE') {
+          setLessons(prev => prev.map(l => l.id === payload.new.id ? payload.new : l))
+        } else if (payload.eventType === 'DELETE') {
+          setLessons(prev => prev.filter(l => l.id !== payload.old.id))
+        }
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const filteredLessons = useMemo(() => {
