@@ -120,9 +120,17 @@ export default function StudentDashboard() {
       })
       .subscribe()
 
+    const channel3 = supabase
+      .channel('public:users:student')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users', filter: `id=eq.${currentUser?.id}` }, () => {
+        fetchDashboardData()
+      })
+      .subscribe()
+
     return () => {
       supabase.removeChannel(channel1)
       supabase.removeChannel(channel2)
+      supabase.removeChannel(channel3)
     }
   }, [currentUser])
 
