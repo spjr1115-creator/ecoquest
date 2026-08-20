@@ -9,7 +9,8 @@ import {
   Activity,
   BarChart3,
   FileText,
-  Settings
+  Settings,
+  FilePlus
 } from 'lucide-react'
 
 export default function AdminDashboard() {
@@ -22,6 +23,17 @@ export default function AdminDashboard() {
   })
   const [recentActivity, setRecentActivity] = useState([])
   const [loading, setLoading] = useState(true)
+
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createSuccess, setCreateSuccess] = useState('')
+  const [newChallenge, setNewChallenge] = useState({
+    title: '',
+    category: 'Waste Management',
+    xp: 100,
+    impactValue: 10,
+    difficulty: 'Medium',
+    description: ''
+  })
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -73,6 +85,43 @@ export default function AdminDashboard() {
 
     fetchDashboardData()
   }, [currentUser])
+
+  async function handleCreateChallenge(e) {
+    e.preventDefault()
+    if (!newChallenge.title.trim()) return
+
+    try {
+      const { error } = await supabase.from('challenges').insert({
+        title: newChallenge.title,
+        category: newChallenge.category,
+        description: newChallenge.description,
+        difficulty: newChallenge.difficulty,
+        xp: Number(newChallenge.xp),
+        impact_value: Number(newChallenge.impactValue),
+        status: 'active'
+      })
+
+      if (error) {
+        console.warn('Error creating challenge:', error.message)
+      } else {
+        setCreateSuccess(`Challenge "${newChallenge.title}" uploaded successfully! 🎉`)
+        setTimeout(() => {
+          setCreateSuccess('')
+          setShowCreateModal(false)
+          setNewChallenge({
+            title: '',
+            category: 'Waste Management',
+            xp: 100,
+            impactValue: 10,
+            difficulty: 'Medium',
+            description: ''
+          })
+        }, 1800)
+      }
+    } catch (err) {
+      console.error('Error creating challenge:', err)
+    }
+  }
 
   if (loading) {
     return (
@@ -153,6 +202,13 @@ export default function AdminDashboard() {
               Quick Actions
             </h2>
             <div className="space-y-3">
+              <div onClick={() => setShowCreateModal(true)}>
+                <AdminAction
+                  icon={<FilePlus className="h-5 w-5" />}
+                  label="Upload Challenge"
+                  description="Create a new challenge for users"
+                />
+              </div>
               <AdminAction
                 icon={<Users className="h-5 w-5" />}
                 label="Manage Users"
@@ -182,6 +238,113 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Create Challenge Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl relative animate-in fade-in duration-200">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Upload New Challenge</h3>
+            <p className="text-slate-600 text-sm mb-4">Create a new environmental challenge for the platform</p>
+
+            {createSuccess ? (
+              <div className="bg-green-50 border border-green-200 text-green-800 p-4 rounded-xl text-center font-medium my-4">
+                {createSuccess}
+              </div>
+            ) : (
+              <form onSubmit={handleCreateChallenge} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase">Title</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Energy Audit Challenge"
+                    value={newChallenge.title}
+                    onChange={e => setNewChallenge({ ...newChallenge, title: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase">Category</label>
+                    <select
+                      value={newChallenge.category}
+                      onChange={e => setNewChallenge({ ...newChallenge, category: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option>Waste Management</option>
+                      <option>Water Conservation</option>
+                      <option>Energy Conservation</option>
+                      <option>Biodiversity</option>
+                      <option>Plastic Pollution</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase">Difficulty</label>
+                    <select
+                      value={newChallenge.difficulty}
+                      onChange={e => setNewChallenge({ ...newChallenge, difficulty: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option>Easy</option>
+                      <option>Medium</option>
+                      <option>Hard</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase">XP Reward</label>
+                    <input
+                      type="number"
+                      value={newChallenge.xp}
+                      onChange={e => setNewChallenge({ ...newChallenge, xp: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase">Impact Points</label>
+                    <input
+                      type="number"
+                      value={newChallenge.impactValue}
+                      onChange={e => setNewChallenge({ ...newChallenge, impactValue: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase">Description</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Brief description of instructions..."
+                    value={newChallenge.description}
+                    onChange={e => setNewChallenge({ ...newChallenge, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                <div className="flex space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(false)}
+                    className="flex-1 py-2 px-4 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 px-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
+                  >
+                    Upload Challenge
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
