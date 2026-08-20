@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react'
-import { db } from '../firebase/config'
-import { collection, getDocs } from 'firebase/firestore'
+import { useState, useEffect, useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { supabase } from '../supabase/supabaseClient'
 import { BookOpen, Clock, Target, Search, Filter } from 'lucide-react'
 
 export default function Lessons() {
   const [lessons, setLessons] = useState([])
-  const [filteredLessons, setFilteredLessons] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [loading, setLoading] = useState(true)
@@ -27,74 +26,14 @@ export default function Lessons() {
   useEffect(() => {
     async function fetchLessons() {
       try {
-        const lessonsSnapshot = await getDocs(collection(db, 'lessons'))
-        const lessonsData = lessonsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-        setLessons(lessonsData)
-        setFilteredLessons(lessonsData)
+        const { data, error } = await supabase.from('lessons').select('*')
+        if (error) throw error
+        if (data && data.length > 0) {
+          setLessons(data)
+          return
+        }
       } catch (error) {
-        console.error('Error fetching lessons:', error)
-        // Set enhanced mock data for demo
-        const mockLessons = [
-          {
-            id: '1',
-            title: 'Introduction to Waste Management',
-            category: 'Waste Management',
-            description: 'Learn the fundamentals of waste management and discover how your daily choices impact our environment.',
-            duration: '20 min',
-            difficulty: 'Beginner',
-            xp: 15
-          },
-          {
-            id: '2',
-            title: 'The Art of Recycling: Beyond the Basics',
-            category: 'Recycling',
-            description: 'Master the art of recycling with detailed guidance on materials, processes, and common mistakes.',
-            duration: '25 min',
-            difficulty: 'Beginner',
-            xp: 20
-          },
-          {
-            id: '3',
-            title: 'Water Conservation: Every Drop Counts',
-            category: 'Water Conservation',
-            description: 'Master water conservation techniques with practical solutions for home, garden, and daily life.',
-            duration: '30 min',
-            difficulty: 'Intermediate',
-            xp: 25
-          },
-          {
-            id: '4',
-            title: 'Climate Change: Understanding Our Impact',
-            category: 'Climate Change',
-            description: 'Comprehensive guide to climate change science, impacts, and actionable solutions for individuals.',
-            duration: '35 min',
-            difficulty: 'Intermediate',
-            xp: 30
-          },
-          {
-            id: '5',
-            title: 'Energy Conservation: Power Your Home Sustainably',
-            category: 'Energy Conservation',
-            description: 'Master energy conservation with practical strategies for home, appliances, and daily habits that save money and planet.',
-            duration: '25 min',
-            difficulty: 'Beginner',
-            xp: 20
-          },
-          {
-            id: '6',
-            title: 'Biodiversity: The Web of Life',
-            category: 'Biodiversity',
-            description: 'Explore the intricate connections in ecosystems and discover why biodiversity is essential for human survival.',
-            duration: '40 min',
-            difficulty: 'Advanced',
-            xp: 35
-          }
-        ]
-        setLessons(mockLessons)
-        setFilteredLessons(mockLessons)
+        console.error('Error fetching lessons from Supabase:', error)
       } finally {
         setLoading(false)
       }
@@ -103,7 +42,7 @@ export default function Lessons() {
     fetchLessons()
   }, [])
 
-  useEffect(() => {
+  const filteredLessons = useMemo(() => {
     let filtered = lessons
 
     if (searchTerm) {
@@ -117,7 +56,7 @@ export default function Lessons() {
       filtered = filtered.filter(lesson => lesson.category === selectedCategory)
     }
 
-    setFilteredLessons(filtered)
+    return filtered
   }, [searchTerm, selectedCategory, lessons])
 
   if (loading) {
@@ -192,8 +131,8 @@ function LessonCard({ lesson }) {
   }
 
   return (
-    <a
-      href={`/lessons/${lesson.id}`}
+    <Link
+      to={`/lessons/${lesson.id}`}
       className="block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
     >
       <div className="p-6">
@@ -227,6 +166,6 @@ function LessonCard({ lesson }) {
           </div>
         </div>
       </div>
-    </a>
+    </Link>
   )
 }

@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Leaf, Mail, Lock, AlertCircle } from 'lucide-react'
+import { supabase } from '../supabase/supabaseClient'
+import { Leaf, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -9,8 +10,22 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   
-  const { login } = useAuth()
+  const { login, currentUser, userRole } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const successMessage = location.state?.message
+
+  const getDashboardPath = (role) => {
+    if (role === 'teacher') return '/dashboard/teacher'
+    if (role === 'admin') return '/dashboard/admin'
+    return '/dashboard/student'
+  }
+
+  useEffect(() => {
+    if (currentUser) {
+      navigate(getDashboardPath(userRole), { replace: true })
+    }
+  }, [currentUser, userRole, navigate])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -18,11 +33,21 @@ export default function Login() {
     setLoading(true)
 
     try {
-      await login(email, password)
-      navigate('/dashboard/student')
-      // Navigation will be handled by the protected route
+      const data = await login(email, password)
+      let role = userRole
+      if (!role && data?.user) {
+        const { data: userDoc } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', data.user.id)
+          .maybeSingle()
+        if (userDoc?.role) {
+          role = userDoc.role
+        }
+      }
+      navigate(getDashboardPath(role), { replace: true })
     } catch (error) {
-      setError('Failed to login. Please check your credentials.')
+      setError(error.message || 'Failed to login. Please check your credentials.')
       console.error(error)
     } finally {
       setLoading(false)
@@ -48,6 +73,17 @@ export default function Login() {
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {successMessage && (
+            <div className="rounded-md bg-green-50 p-4 border border-green-200">
+              <div className="flex">
+                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-green-800">{successMessage}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="rounded-md bg-red-50 p-4">
               <div className="flex">

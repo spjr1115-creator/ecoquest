@@ -85,7 +85,7 @@ export default function Navbar() {
               >
                 <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
                   <span className="text-sm font-semibold text-green-600">
-                    {currentUser.displayName?.[0] || 'U'}
+                    {currentUser.user_metadata?.name?.[0] || currentUser.email?.[0]?.toUpperCase() || 'U'}
                   </span>
                 </div>
               </Link>

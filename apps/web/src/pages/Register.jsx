@@ -15,8 +15,18 @@ export default function Register() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   
-  const { register } = useAuth()
+  const { register, currentUser, userRole } = useAuth()
   const navigate = useNavigate()
+
+  const getDashboardPath = (role) => {
+    if (role === 'teacher') return '/dashboard/teacher'
+    if (role === 'admin') return '/dashboard/admin'
+    return '/dashboard/student'
+  }
+
+  if (currentUser) {
+    navigate(getDashboardPath(userRole), { replace: true })
+  }
 
   function handleChange(e) {
     setFormData({
@@ -42,32 +52,31 @@ export default function Register() {
     setLoading(true)
 
     try {
-      await register(
+      const { role } = await register(
         formData.email,
         formData.password,
         formData.name,
         formData.role,
         formData.institutionId
       )
-      navigate('/')
+      navigate(getDashboardPath(role || formData.role), { replace: true })
     } catch (error) {
-      // Show more specific error message
       let errorMessage = 'Failed to create account. Please try again.'
-      
-      if (error.code === 'auth/email-already-in-use') {
+
+      if (error.message?.includes('User already registered')) {
         errorMessage = 'An account with this email already exists.'
-      } else if (error.code === 'auth/weak-password') {
+      } else if (error.message?.includes('Password should be at least')) {
         errorMessage = 'Password should be at least 6 characters.'
-      } else if (error.code === 'auth/invalid-email') {
+      } else if (error.message?.includes('Invalid email')) {
         errorMessage = 'Please enter a valid email address.'
-      } else if (error.code === 'permission-denied') {
-        errorMessage = 'Permission denied. Please check Firebase security rules.'
-      } else {
-        errorMessage = `Error: ${error.message || 'Unknown error occurred'}`
+      } else if (error.message?.includes('Signup is disabled')) {
+        errorMessage = 'Registration is currently disabled. Please contact support.'
+      } else if (error.message) {
+        errorMessage = error.message
       }
-      
+
       setError(errorMessage)
-      console.error('Registration error:', error.code, error.message)
+      console.error('Registration error:', error)
     } finally {
       setLoading(false)
     }

@@ -1,13 +1,6 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from 'react'
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updateProfile
-} from 'firebase/auth'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { auth, db } from '../firebase/config'
+import { supabase } from '../supabase/supabaseClient'
 
 const AuthContext = createContext()
 
@@ -21,67 +14,144 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    async function fetchSession() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const user = session?.user || null
+        setCurrentUser(user)
+
+        if (user) {
+          const { data: userDoc } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle()
+          
+          if (userDoc?.role) {
+            setUserRole(userDoc.role)
+          } else if (user.user_metadata?.role) {
+            setUserRole(user.user_metadata.role)
+          }
+        } else {
+          setUserRole(null)
+        }
+      } catch (err) {
+        console.error('Error getting initial session:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSession()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const user = session?.user || null
       setCurrentUser(user)
-      
+
       if (user) {
-        // Fetch user role from Firestore
-        const userDoc = await getDoc(doc(db, 'users', user.uid))
-        if (userDoc.exists()) {
-          setUserRole(userDoc.data().role)
+        const { data: userDoc } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (userDoc?.role) {
+          setUserRole(userDoc.role)
+        } else if (user.user_metadata?.role) {
+          setUserRole(user.user_metadata.role)
         }
       } else {
         setUserRole(null)
       }
-      
       setLoading(false)
     })
 
-    return unsubscribe
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   async function register(email, password, name, role, institutionId) {
-    console.log('Attempting registration with:', { email, name, role })
-    
-    try {
-      const { user } = await createUserWithEmailAndPassword(auth, email, password)
-      console.log('User created successfully:', user.uid)
-      
-      await updateProfile(user, { displayName: name })
-      console.log('Profile updated')
-      
-      // Create user document in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
-        name,
+    console.log('Attempting registration with Supabase:', { email, name, role })
+
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          role,
+          institutionId
+        }
+      }
+    })
+
+    if (authError) {
+      console.error('Supabase Auth signUp error:', authError)
+      throw authError
+    }
+
+    const user = authData?.user
+    if (user) {
+      // Upsert profile in 'users' table
+      const { error: dbError } = await supabase.from('users').upsert({
+        id: user.id,
         email,
+        name,
         role,
-        institutionId,
+        institution_id: institutionId,
         xp: 0,
         level: 1,
-        impactScore: 0,
+        impact_score: 0,
         streak: 0,
-        badges: [],
-        createdAt: new Date().toISOString()
+        badges: []
       })
-      console.log('User document created in Firestore')
-      
-      return user
-    } catch (error) {
-      console.error('Registration error details:', {
-        code: error.code,
-        message: error.message,
-        customData: error.customData
-      })
+
+      if (dbError) {
+        console.error('Error creating user record in Supabase DB:', dbError)
+        throw dbError
+      }
+
+      setUserRole(role)
+      setCurrentUser(user)
+    }
+
+    return { user, role }
+  }
+
+  async function login(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    })
+
+    if (error) {
+      console.error('Supabase login error:', error)
       throw error
     }
+
+    if (data.user) {
+      const { data: userDoc } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', data.user.id)
+        .maybeSingle()
+
+      if (userDoc?.role) {
+        setUserRole(userDoc.role)
+      } else if (data.user.user_metadata?.role) {
+        setUserRole(data.user.user_metadata.role)
+      }
+    }
+
+    return data
   }
 
-  function login(email, password) {
-    return signInWithEmailAndPassword(auth, email, password)
-  }
-
-  function logout() {
-    return signOut(auth)
+  async function logout() {
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
+    setCurrentUser(null)
+    setUserRole(null)
   }
 
   const value = {

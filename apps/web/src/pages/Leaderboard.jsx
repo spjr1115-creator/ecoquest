@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import { db } from '../firebase/config'
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore'
-import { Trophy, Medal, Award, TrendingUp, Users, Building } from 'lucide-react'
+import { supabase } from '../supabase/supabaseClient'
+import { Trophy, Medal, Award, TrendingUp, Users } from 'lucide-react'
 
 export default function Leaderboard() {
   const [activeTab, setActiveTab] = useState('individual')
@@ -11,61 +10,30 @@ export default function Leaderboard() {
   useEffect(() => {
     async function fetchLeaderboard() {
       try {
-        let query
-        
         if (activeTab === 'individual') {
-          query = query(
-            collection(db, 'users'),
-            where('role', '==', 'student'),
-            orderBy('xp', 'desc'),
-            limit(20)
-          )
-        } else if (activeTab === 'class') {
-          // Mock class data
-          setLeaderboard([
-            { name: 'Class 10-A', xp: 2450, impact: 120, rank: 1 },
-            { name: 'Class 11-B', xp: 2100, impact: 105, rank: 2 },
-            { name: 'Class 12-C', xp: 1890, impact: 95, rank: 3 },
-            { name: 'Class 9-D', xp: 1750, impact: 88, rank: 4 },
-            { name: 'Class 10-E', xp: 1620, impact: 81, rank: 5 },
-          ])
-          setLoading(false)
-          return
-        } else if (activeTab === 'institution') {
-          // Mock institution data
-          setLeaderboard([
-            { name: 'Green Valley High School', xp: 15420, impact: 771, rank: 1 },
-            { name: 'Eco Academy', xp: 12350, impact: 617, rank: 2 },
-            { name: 'Sustainable College', xp: 10890, impact: 544, rank: 3 },
-            { name: 'Nature School', xp: 9750, impact: 487, rank: 4 },
-            { name: 'Environmental Institute', xp: 8920, impact: 446, rank: 5 },
-          ])
-          setLoading(false)
-          return
-        }
+          const { data, error } = await supabase
+            .from('users')
+            .select('id, name, xp, impact_score, level')
+            .eq('role', 'student')
+            .order('xp', { ascending: false })
+            .limit(20)
 
-        const snapshot = await getDocs(query)
-        const data = snapshot.docs.map((doc, index) => ({
-          id: doc.id,
-          rank: index + 1,
-          ...doc.data()
-        }))
-        setLeaderboard(data)
+          if (error) throw error
+          if (data && data.length > 0) {
+            setLeaderboard(data.map((user, index) => ({
+              id: user.id,
+              rank: index + 1,
+              name: user.name,
+              xp: user.xp || 0,
+              impact: user.impact_score || 0,
+              level: user.level || 1
+            })))
+            return
+          }
+        }
       } catch (error) {
         console.error('Error fetching leaderboard:', error)
-        // Set mock data for demo
-        setLeaderboard([
-          { name: 'Alex Johnson', xp: 3450, impact: 172, rank: 1, level: 12 },
-          { name: 'Emma Smith', xp: 3200, impact: 160, rank: 2, level: 11 },
-          { name: 'Michael Brown', xp: 2980, impact: 149, rank: 3, level: 10 },
-          { name: 'Sarah Davis', xp: 2850, impact: 142, rank: 4, level: 10 },
-          { name: 'James Wilson', xp: 2700, impact: 135, rank: 5, level: 9 },
-          { name: 'Emily Taylor', xp: 2550, impact: 127, rank: 6, level: 9 },
-          { name: 'David Martinez', xp: 2400, impact: 120, rank: 7, level: 8 },
-          { name: 'Lisa Anderson', xp: 2250, impact: 112, rank: 8, level: 8 },
-          { name: 'Robert Thomas', xp: 2100, impact: 105, rank: 9, level: 7 },
-          { name: 'Jennifer Garcia', xp: 1950, impact: 97, rank: 10, level: 7 },
-        ])
+        setLeaderboard([])
       } finally {
         setLoading(false)
       }
@@ -106,28 +74,6 @@ export default function Leaderboard() {
           >
             <Users className="h-5 w-5 inline mr-2" />
             Individual
-          </button>
-          <button
-            onClick={() => setActiveTab('class')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'class'
-                ? 'border-green-500 text-green-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <Award className="h-5 w-5 inline mr-2" />
-            Class
-          </button>
-          <button
-            onClick={() => setActiveTab('institution')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'institution'
-                ? 'border-green-500 text-green-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <Building className="h-5 w-5 inline mr-2" />
-            Institution
           </button>
         </nav>
       </div>

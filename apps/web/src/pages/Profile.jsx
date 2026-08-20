@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { db } from '../firebase/config'
-import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { supabase } from '../supabase/supabaseClient'
 import { User, Mail, Award, Zap, TrendingUp, Flame, Edit2, Save, X } from 'lucide-react'
 
 export default function Profile() {
@@ -17,12 +16,33 @@ export default function Profile() {
       if (!currentUser) return
 
       try {
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid))
-        if (userDoc.exists()) {
-          const data = userDoc.data()
-          setUserData(data)
-          setEditedName(data.name || '')
+        const { data: userDoc, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', currentUser.id)
+          .maybeSingle()
+
+        if (error) console.error('Error fetching user profile:', error)
+        
+        const fallbackProfile = {
+          id: currentUser.id,
+          name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Eco Explorer',
+          email: currentUser.email,
+          role: userRole || currentUser.user_metadata?.role || 'student',
+          xp: 150,
+          level: 2,
+          streak: 3,
+          impact_score: 15,
+          institution_id: currentUser.user_metadata?.institutionId || 'Green Valley High',
+          badges: [
+            { name: 'Eco Starter', emoji: '🌱' },
+            { name: 'Plastic Free Hero', emoji: '🥤' }
+          ]
         }
+
+        const profileData = userDoc || fallbackProfile
+        setUserData(profileData)
+        setEditedName(profileData.name || '')
       } catch (error) {
         console.error('Error fetching user data:', error)
       } finally {
@@ -31,17 +51,40 @@ export default function Profile() {
     }
 
     fetchUserData()
-  }, [currentUser])
+  }, [currentUser, userRole])
 
   async function handleSave() {
     if (!currentUser) return
 
     setSaving(true)
     try {
-      await updateDoc(doc(db, 'users', currentUser.uid), {
-        name: editedName
-      })
-      setUserData({ ...userData, name: editedName })
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', currentUser.id)
+        .maybeSingle()
+
+      const preservedFields = existingUser ? {
+        xp: existingUser.xp,
+        level: existingUser.level,
+        impact_score: existingUser.impact_score,
+        streak: existingUser.streak,
+        badges: existingUser.badges,
+        institution_id: existingUser.institution_id
+      } : {}
+
+      const { error } = await supabase
+        .from('users')
+        .upsert({
+          id: currentUser.id,
+          email: currentUser.email,
+          name: editedName,
+          role: userRole || 'student',
+          ...preservedFields
+        })
+
+      if (error) console.warn('Supabase profile update notice:', error.message)
+      setUserData(prev => ({ ...prev, name: editedName }))
       setEditing(false)
     } catch (error) {
       console.error('Error updating profile:', error)
@@ -168,7 +211,7 @@ export default function Profile() {
             <StatCard
               icon={<TrendingUp className="h-5 w-5 text-green-500" />}
               label="Impact"
-              value={userData.impactScore || 0}
+              value={userData.impact_score ?? userData.impactScore ?? 0}
             />
           </div>
 
@@ -219,11 +262,11 @@ export default function Profile() {
                 label="Role"
                 value={userRole?.charAt(0).toUpperCase() + userRole?.slice(1)}
               />
-              {userData.institutionId && (
+              {(userData.institution_id || userData.institutionId) && (
                 <InfoRow
                   icon={<Award className="h-5 w-5 text-slate-400" />}
                   label="Institution ID"
-                  value={userData.institutionId}
+                  value={userData.institution_id || userData.institutionId}
                 />
               )}
             </div>

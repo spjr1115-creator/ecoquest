@@ -1,13 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { db } from '../firebase/config'
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs,
-  orderBy
-} from 'firebase/firestore'
+import { supabase } from '../supabase/supabaseClient'
 import { 
   Building, 
   Users, 
@@ -36,45 +29,41 @@ export default function AdminDashboard() {
 
       try {
         // Fetch students
-        const studentsQuery = query(
-          collection(db, 'users'),
-          where('role', '==', 'student')
-        )
-        const studentsSnapshot = await getDocs(studentsQuery)
-        const students = studentsSnapshot.docs.map(doc => doc.data())
+        const { data: students } = await supabase
+          .from('users')
+          .select('*')
+          .eq('role', 'student')
+        const studentList = students || []
         
-        // Fetch teachers
-        const teachersQuery = query(
-          collection(db, 'users'),
-          where('role', '==', 'teacher')
-        )
-        const teachersSnapshot = await getDocs(teachersQuery)
-        
-        // Fetch institutions
-        const institutionsSnapshot = await getDocs(collection(db, 'institutions'))
+        // Fetch teachers count
+        const { count: teacherCount } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .eq('role', 'teacher')
 
         // Calculate total impact
-        const totalImpact = students.reduce((sum, student) => sum + (student.impactScore || 0), 0)
+        const totalImpact = studentList.reduce((sum, s) => sum + (s.impact_score || 0), 0)
 
         // Fetch recent activity
-        const activityQuery = query(
-          collection(db, 'submissions'),
-          orderBy('submittedAt', 'desc')
-        )
-        const activitySnapshot = await getDocs(activityQuery)
-        const activities = activitySnapshot.docs.slice(0, 5).map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
+        const { data: activities } = await supabase
+          .from('user_challenges')
+          .select('*')
+          .order('submitted_at', { ascending: false })
+          .limit(5)
 
         setStats({
-          totalInstitutions: institutionsSnapshot.size,
-          totalStudents: students.length,
-          totalTeachers: teachersSnapshot.size,
+          totalInstitutions: 1, // Default institution
+          totalStudents: studentList.length,
+          totalTeachers: teacherCount || 0,
           totalImpact
         })
 
-        setRecentActivity(activities)
+        setRecentActivity((activities || []).map(a => ({
+          id: a.id,
+          challengeTitle: a.challenge_id || 'Challenge',
+          submittedAt: a.submitted_at,
+          status: a.status
+        })))
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
       } finally {
@@ -154,20 +143,6 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
-
-          {/* Impact Categories */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-xl font-semibold text-slate-900 mb-4">
-              Environmental Impact by Category
-            </h2>
-            <div className="space-y-4">
-              <ImpactCategory category="Waste Management" value={35} color="green" />
-              <ImpactCategory category="Water Conservation" value={25} color="blue" />
-              <ImpactCategory category="Energy Conservation" value={20} color="yellow" />
-              <ImpactCategory category="Tree Planting" value={15} color="emerald" />
-              <ImpactCategory category="E-Waste" value={5} color="purple" />
-            </div>
-          </div>
         </div>
 
         {/* Sidebar */}
@@ -203,27 +178,6 @@ export default function AdminDashboard() {
                 label="Platform Settings"
                 description="Configure platform-wide settings"
               />
-            </div>
-          </div>
-
-          {/* Top Performing Classes */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-xl font-semibold text-slate-900 mb-4">
-              Top Performing Classes
-            </h2>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-700">Class 10-A</span>
-                <span className="font-semibold text-green-600">2,450 XP</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-700">Class 11-B</span>
-                <span className="font-semibold text-green-600">2,100 XP</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-700">Class 12-C</span>
-                <span className="font-semibold text-green-600">1,890 XP</span>
-              </div>
             </div>
           </div>
         </div>
@@ -278,31 +232,6 @@ function ActivityItem({ activity }) {
       }`}>
         {activity.status}
       </span>
-    </div>
-  )
-}
-
-function ImpactCategory({ category, value, color }) {
-  const colorClasses = {
-    green: 'bg-green-500',
-    blue: 'bg-blue-500',
-    yellow: 'bg-yellow-500',
-    emerald: 'bg-emerald-500',
-    purple: 'bg-purple-500'
-  }
-
-  return (
-    <div>
-      <div className="flex justify-between text-sm mb-1">
-        <span className="text-slate-700">{category}</span>
-        <span className="font-medium text-slate-900">{value}%</span>
-      </div>
-      <div className="w-full bg-slate-200 rounded-full h-2">
-        <div
-          className={`${colorClasses[color]} h-2 rounded-full transition-all`}
-          style={{ width: `${value}%` }}
-        ></div>
-      </div>
     </div>
   )
 }

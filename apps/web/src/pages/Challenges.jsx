@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react'
-import { db } from '../firebase/config'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { useState, useEffect, useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { supabase } from '../supabase/supabaseClient'
 import { Target, Clock, Search, Filter, Zap, Flame } from 'lucide-react'
 
 export default function Challenges() {
   const [challenges, setChallenges] = useState([])
-  const [filteredChallenges, setFilteredChallenges] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedDifficulty, setSelectedDifficulty] = useState('all')
@@ -30,123 +29,18 @@ export default function Challenges() {
   useEffect(() => {
     async function fetchChallenges() {
       try {
-        const challengesQuery = query(
-          collection(db, 'challenges'),
-          where('status', '==', 'active')
-        )
-        const challengesSnapshot = await getDocs(challengesQuery)
-        const challengesData = challengesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-        setChallenges(challengesData)
-        setFilteredChallenges(challengesData)
+        const { data, error } = await supabase
+          .from('challenges')
+          .select('*')
+          .eq('status', 'active')
+
+        if (error) throw error
+        if (data && data.length > 0) {
+          setChallenges(data)
+          return
+        }
       } catch (error) {
-        console.error('Error fetching challenges:', error)
-        // Set enhanced mock data for demo
-        const mockChallenges = [
-          {
-            id: '1',
-            title: 'Plastic-Free Day Challenge',
-            category: 'Plastic Pollution',
-            description: 'Eliminate all single-use plastics for 24 hours. This challenge raises awareness about plastic pollution and helps you discover sustainable alternatives.',
-            difficulty: 'Medium',
-            xp: 100,
-            impactValue: 5,
-            deadline: '2024-12-31',
-            participants: 234
-          },
-          {
-            id: '2',
-            title: 'Water Warrior: 7-Day Conservation Challenge',
-            category: 'Water Conservation',
-            description: 'Reduce your water consumption by 30% for one week through conscious habits and practical water-saving techniques.',
-            difficulty: 'Medium',
-            xp: 150,
-            impactValue: 8,
-            deadline: '2024-12-31',
-            participants: 189
-          },
-          {
-            id: '3',
-            title: 'Energy Saver: Phantom Load Elimination',
-            category: 'Energy Conservation',
-            description: 'Identify and eliminate phantom energy loads in your home. Electronics consume energy even when "off" - costing you money and increasing your carbon footprint.',
-            difficulty: 'Easy',
-            xp: 75,
-            impactValue: 6,
-            deadline: '2024-12-31',
-            participants: 312
-          },
-          {
-            id: '4',
-            title: 'Community Tree Planting Initiative',
-            category: 'Biodiversity',
-            description: 'Plant a native tree in your community and commit to its care for the first year. Trees provide countless environmental benefits from carbon sequestration to habitat creation.',
-            difficulty: 'Hard',
-            xp: 200,
-            impactValue: 15,
-            deadline: '2024-12-31',
-            participants: 87
-          },
-          {
-            id: '5',
-            title: 'E-Waste Warrior: Responsible Electronics Disposal',
-            category: 'E-Waste',
-            description: 'Collect and properly dispose of 5 electronic waste items from your home. E-waste is the fastest-growing waste stream and contains valuable, toxic materials.',
-            difficulty: 'Easy',
-            xp: 80,
-            impactValue: 7,
-            deadline: '2024-12-31',
-            participants: 156
-          },
-          {
-            id: '6',
-            title: 'Zero Waste Week: Minimalist Living Challenge',
-            category: 'Waste Management',
-            description: 'Produce zero landfill waste for one week through composting, recycling, and conscious consumption. This challenge transforms your relationship with waste.',
-            difficulty: 'Hard',
-            xp: 250,
-            impactValue: 12,
-            deadline: '2024-12-31',
-            participants: 67
-          },
-          {
-            id: '7',
-            title: 'Sustainable Transportation Week',
-            category: 'Sustainable Transportation',
-            description: 'Replace car trips with sustainable alternatives for one week. Transportation accounts for 29% of US greenhouse gas emissions.',
-            difficulty: 'Medium',
-            xp: 120,
-            impactValue: 9,
-            deadline: '2024-12-31',
-            participants: 145
-          },
-          {
-            id: '8',
-            title: 'Sustainable Shopping Challenge',
-            category: 'Sustainable Consumption',
-            description: 'Practice conscious consumption for one week by prioritizing second-hand, local, and sustainable products.',
-            difficulty: 'Medium',
-            xp: 100,
-            impactValue: 7,
-            deadline: '2024-12-31',
-            participants: 178
-          },
-          {
-            id: '9',
-            title: 'Carbon Footprint Audit and Reduction',
-            category: 'Climate Change',
-            description: 'Calculate your carbon footprint and implement strategies to reduce it by 20% over one month.',
-            difficulty: 'Hard',
-            xp: 200,
-            impactValue: 14,
-            deadline: '2024-12-31',
-            participants: 92
-          }
-        ]
-        setChallenges(mockChallenges)
-        setFilteredChallenges(mockChallenges)
+        console.error('Error fetching challenges from Supabase:', error)
       } finally {
         setLoading(false)
       }
@@ -155,7 +49,7 @@ export default function Challenges() {
     fetchChallenges()
   }, [])
 
-  useEffect(() => {
+  const filteredChallenges = useMemo(() => {
     let filtered = challenges
 
     if (searchTerm) {
@@ -173,7 +67,7 @@ export default function Challenges() {
       filtered = filtered.filter(challenge => challenge.difficulty === selectedDifficulty)
     }
 
-    setFilteredChallenges(filtered)
+    return filtered
   }, [searchTerm, selectedCategory, selectedDifficulty, challenges])
 
   if (loading) {
@@ -261,8 +155,8 @@ function ChallengeCard({ challenge }) {
   }
 
   return (
-    <a
-      href={`/challenges/${challenge.id}`}
+    <Link
+      to={`/challenges/${challenge.id}`}
       className="block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
     >
       <div className="p-6">
@@ -309,6 +203,6 @@ function ChallengeCard({ challenge }) {
           </div>
         </div>
       </div>
-    </a>
+    </Link>
   )
 }
