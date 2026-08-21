@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Leaf, LogOut, User, Trophy, BookOpen, Target } from 'lucide-react'
+import { Leaf, LogOut, User, Trophy, BookOpen, Target, CheckCircle } from 'lucide-react'
 
 export default function Navbar() {
   const { currentUser, userRole, logout } = useAuth()
@@ -60,13 +60,22 @@ export default function Navbar() {
               )}
 
               {userRole === 'teacher' && (
-                <Link
-                  to="/dashboard/teacher"
-                  className="flex items-center space-x-1 text-slate-600 hover:text-green-600 transition-colors"
-                >
-                  <User className="h-5 w-5" />
-                  <span className="hidden sm:inline">Dashboard</span>
-                </Link>
+                <>
+                  <Link
+                    to="/dashboard/teacher"
+                    className="flex items-center space-x-1 text-slate-600 hover:text-green-600 transition-colors"
+                  >
+                    <User className="h-5 w-5" />
+                    <span className="hidden sm:inline">Dashboard</span>
+                  </Link>
+                  <Link
+                    to="/approvals"
+                    className="flex items-center space-x-1 text-slate-600 hover:text-green-600 transition-colors"
+                  >
+                    <CheckCircle className="h-5 w-5" />
+                    <span className="hidden sm:inline">Approvals</span>
+                  </Link>
+                </>
               )}
 
               {userRole === 'admin' && (

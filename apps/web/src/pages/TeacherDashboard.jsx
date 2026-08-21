@@ -311,34 +311,23 @@ export default function TeacherDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Pending Verifications */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-slate-900">
-              Pending Verifications
-            </h2>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-              {stats.pendingVerifications} pending
-            </span>
+        {/* Pending Verifications Shortcut */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col justify-center items-center text-center">
+          <div className="h-16 w-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+            <Clock className="h-8 w-8 text-yellow-600" />
           </div>
-
-          {pendingSubmissions.length === 0 ? (
-            <div className="text-center py-8">
-              <CheckCircle className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500">All submissions verified! Excellent job.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {pendingSubmissions.map((submission) => (
-                <SubmissionCard
-                  key={submission.id}
-                  submission={submission}
-                  onApprove={() => handleVerification(submission.id, 'approved')}
-                  onReject={() => handleVerification(submission.id, 'rejected')}
-                />
-              ))}
-            </div>
-          )}
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">
+            Pending Verifications
+          </h2>
+          <p className="text-slate-500 mb-6">
+            You have <span className="font-semibold text-slate-700">{stats.pendingVerifications}</span> submissions waiting for your review.
+          </p>
+          <Link
+            to="/approvals"
+            className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-yellow-500 text-white rounded-xl font-semibold shadow-sm hover:bg-yellow-600 transition-all"
+          >
+            Go to Approvals Page
+          </Link>
         </div>
 
         {/* Quick Actions & Shortcut */}

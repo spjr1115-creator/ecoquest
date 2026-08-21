@@ -12,6 +12,7 @@ import Challenges from './pages/Challenges'
 import Leaderboard from './pages/Leaderboard'
 import Profile from './pages/Profile'
 import ChallengeDetail from './pages/ChallengeDetail'
+import Approvals from './pages/Approvals'
 import LessonDetail from './pages/LessonDetail'
 
 function LoadingScreen() {
@@ -81,6 +82,7 @@ function App() {
             <Route path="/dashboard/student" element={<ProtectedRoute allowedRoles={['student']}><StudentDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/teacher" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/approvals" element={<ProtectedRoute allowedRoles={['teacher', 'admin']}><Approvals /></ProtectedRoute>} />
             <Route path="/lessons" element={<ProtectedRoute allowedRoles={['student']}><Lessons /></ProtectedRoute>} />
             <Route path="/lessons/:id" element={<ProtectedRoute allowedRoles={['student']}><LessonDetail /></ProtectedRoute>} />
             <Route path="/challenges" element={<ProtectedRoute allowedRoles={['student']}><Challenges /></ProtectedRoute>} />
