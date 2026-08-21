@@ -2,7 +2,22 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../supabase/supabaseClient'
-import { ArrowLeft, Clock, Target, CheckCircle, BookOpen } from 'lucide-react'
+import { LESSONS_DATA } from '../data/lessonsData'
+import { 
+  ArrowLeft, 
+  Clock, 
+  Target, 
+  CheckCircle, 
+  BookOpen, 
+  HelpCircle, 
+  Sparkles, 
+  Check, 
+  X, 
+  RotateCcw, 
+  Award,
+  ChevronRight,
+  AlertCircle
+} from 'lucide-react'
 
 export default function LessonDetail() {
   const { id } = useParams()
@@ -11,10 +26,21 @@ export default function LessonDetail() {
   const [lesson, setLesson] = useState(null)
   const [completed, setCompleted] = useState(false)
   const [loading, setLoading] = useState(true)
+  
+  // Quiz states
+  const [quizState, setQuizState] = useState('ready') // 'ready' | 'active' | 'finished'
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [selectedOption, setSelectedOption] = useState(null)
+  const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false)
+  const [userAnswers, setUserAnswers] = useState([]) // array of { questionId, selectedIndex, isCorrect }
+  const [quizScore, setQuizScore] = useState(0)
+  const [awardedXp, setAwardedXp] = useState(0)
+  const [bonusEarned, setBonusEarned] = useState(0)
 
   useEffect(() => {
     async function fetchLesson() {
       try {
+        // Try fetching from Supabase first
         const { data, error } = await supabase
           .from('lessons')
           .select('*')
@@ -22,243 +48,47 @@ export default function LessonDetail() {
           .maybeSingle()
 
         if (error) console.error('Supabase lesson query error:', error)
-        if (data) {
-          setLesson(data)
-          return
+        
+        let foundLesson = data
+
+        // If not found in Supabase or missing detailed content/quiz, fallback to LESSONS_DATA
+        if (!foundLesson || !foundLesson.content || !foundLesson.quiz) {
+          const fallback = LESSONS_DATA.find(l => l.id === id) ||
+            LESSONS_DATA.find(l => l.title.toLowerCase().includes(id.toLowerCase())) ||
+            LESSONS_DATA[0]
+          
+          foundLesson = foundLesson ? { ...fallback, ...foundLesson, quiz: foundLesson.quiz || fallback.quiz, content: foundLesson.content || fallback.content } : fallback
+        }
+
+        setLesson(foundLesson)
+
+        // Check if user previously completed this lesson
+        if (currentUser) {
+          const { data: userLesson } = await supabase
+            .from('user_lessons')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .eq('lesson_id', foundLesson.id)
+            .maybeSingle()
+
+          if (userLesson && userLesson.completed) {
+            setCompleted(true)
+          }
         }
       } catch (error) {
         console.error('Error fetching lesson:', error)
-        // Import enhanced lesson content
-        const enhancedLessons = {
-          '1': {
-            id: '1',
-            title: 'Introduction to Waste Management',
-            category: 'Waste Management',
-            description: 'Learn the fundamentals of waste management and discover how your daily choices impact our environment.',
-            duration: '20 min',
-            difficulty: 'Beginner',
-            xp: 15,
-            content: `
-              <h2>What is Waste Management?</h2>
-              <p>Waste management refers to the collection, transport, processing, recycling, and disposal of waste materials. It's a crucial aspect of environmental protection and public health that affects every single person on Earth.</p>
-              
-              <h2>The Global Waste Crisis</h2>
-              <p>Every year, the world generates over 2 billion tons of waste. That's equivalent to the weight of 3,000 Empire State Buildings! If current trends continue, this could increase by 70% by 2050.</p>
-              
-              <h2>Why is Waste Management Important?</h2>
-              <p>Proper waste management is critical because:</p>
-              <ul>
-                <li><strong>Environmental Protection:</strong> Prevents pollution of air, water, and soil</li>
-                <li><strong>Resource Conservation:</strong> Recovers valuable materials for reuse</li>
-                <li><strong>Climate Action:</strong> Reduces greenhouse gas emissions from landfills</li>
-                <li><strong>Public Health:</strong> Prevents disease spread and contamination</li>
-                <li><strong>Economic Benefits:</strong> Creates jobs in recycling and waste management</li>
-              </ul>
-              
-              <h2>The 5Rs of Waste Management</h2>
-              <p>Building on the traditional 3Rs, modern waste management follows 5 principles:</p>
-              <ol>
-                <li><strong>Refuse:</strong> Say no to unnecessary waste (straws, plastic bags)</li>
-                <li><strong>Reduce:</strong> Minimize waste generation at the source</li>
-                <li><strong>Reuse:</strong> Find new ways to use items instead of discarding</li>
-                <li><strong>Repurpose:</strong> Transform waste into new useful items</li>
-                <li><strong>Recycle:</strong> Process materials into new products</li>
-              </ol>
-              
-              <h2>Types of Waste and Their Impact</h2>
-              <ul>
-                <li><strong>Municipal Solid Waste:</strong> Household waste (60% of global waste)</li>
-                <li><strong>Hazardous Waste:</strong> Chemicals, batteries, medical waste (requires special handling)</li>
-                <li><strong>Industrial Waste:</strong> Manufacturing byproducts (often toxic)</li>
-                <li><strong>Electronic Waste:</strong> Fastest growing waste stream (50 million tons annually)</li>
-                <li><strong>Organic Waste:</strong> Food scraps, yard waste (can be composted)</li>
-              </ul>
-              
-              <h2>Real-World Impact</h2>
-              <p><strong>Did you know?</strong> The average person generates 4.5 pounds of waste per day. Over a lifetime, that's equivalent to the weight of 3 elephants!</p>
-              
-              <h2>What Can You Do Starting Today?</h2>
-              <p>Everyone can contribute to better waste management through simple daily actions:</p>
-              <ul>
-                <li>Set up a home recycling system with separate bins</li>
-                <li>Start composting organic kitchen waste</li>
-                <li>Carry reusable bags, bottles, and containers</li>
-                <li>Choose products with minimal or recyclable packaging</li>
-                <li>Repair items instead of immediately replacing them</li>
-                <li>Support businesses with sustainable packaging practices</li>
-              </ul>
-              
-              <h2>Case Study: Zero Waste Communities</h2>
-              <p>Cities like San Francisco and Kamikatsu, Japan have achieved over 80% waste diversion rates through comprehensive recycling programs and community education. These communities prove that dramatic waste reduction is possible with commitment and proper systems.</p>
-            `
-          },
-          '2': {
-            id: '2',
-            title: 'The Art of Recycling: Beyond the Basics',
-            category: 'Recycling',
-            description: 'Master the art of recycling with detailed guidance on materials, processes, and common mistakes.',
-            duration: '25 min',
-            difficulty: 'Beginner',
-            xp: 20,
-            content: `
-              <h2>Understanding Recycling</h2>
-              <p>Recycling is the process of converting waste materials into new materials and objects. It's one of the most effective ways to reduce waste, conserve natural resources, and decrease greenhouse gas emissions.</p>
-              
-              <h2>The Environmental Impact of Recycling</h2>
-              <p><strong>Recycling one aluminum can:</strong> Saves enough energy to run a TV for 3 hours. If everyone recycled one aluminum can, we'd save the equivalent energy of 500 million gallons of gasoline!</p>
-              
-              <h2>What Can (and Can't) Be Recycled?</h2>
-              <h3>✅ Easily Recyclable:</h3>
-              <ul>
-                <li><strong>Paper:</strong> Office paper, newspapers, cardboard, magazines</li>
-                <li><strong>Plastics:</strong> #1 (PET), #2 (HDPE), #5 (PP) - check bottom of containers</li>
-                <li><strong>Glass:</strong> Bottles and jars (any color)</li>
-                <li><strong>Metal:</strong> Aluminum cans, steel cans, foil</li>
-              </ul>
-              
-              <h3>❌ Common Recycling Mistakes:</h3>
-              <ul>
-                <li><strong>Pizza boxes with grease:</strong> Contaminate entire recycling batches</li>
-                <li><strong>Plastic bags:</strong> Jam recycling machinery (take to grocery stores instead)</li>
-                <li><strong>Styrofoam:</strong> Most facilities don't accept it</li>
-                <li><strong>Broken glass:</strong> Safety hazard for workers</li>
-                <li><strong>Food-contaminated items:</strong> Must be cleaned first</li>
-              </ul>
-              
-              <h2>The Recycling Journey</h2>
-              <ol>
-                <li><strong>Collection:</strong> Materials are collected from homes and businesses</li>
-                <li><strong>Sorting:</strong> Materials are separated by type (manual and automated)</li>
-                <li><strong>Processing:</strong> Materials are cleaned, shredded, and prepared</li>
-                <li><strong>Manufacturing:</strong> Processed materials become new products</li>
-                <li><strong>Purchasing:</strong> Consumers buy products made from recycled materials</li>
-              </ol>
-              
-              <h2>Advanced Recycling: The Future</h2>
-              <p>New technologies are revolutionizing recycling:</p>
-              <ul>
-                <li><strong>Chemical Recycling:</strong> Breaking down plastics at molecular level</li>
-                <li><strong>AI Sorting:</strong> Advanced systems identify and separate materials</li>
-                <li><strong>Upcycling:</strong> Converting waste into higher-value products</li>
-              </ul>
-              
-              <h2>Tips for Effective Recycling</h2>
-              <ul>
-                <li><strong>Know your local rules:</strong> Recycling varies by location</li>
-                <li><strong>Clean it:</strong> Rinse containers before recycling</li>
-                <li><strong>Don't bag it:</strong> Put recyclables loose in bins</li>
-                <li><strong>When in doubt, throw it out:</strong> Better to waste one item than contaminate a batch</li>
-              </ul>
-              
-              <h2>The Economic Case for Recycling</h2>
-              <p>The recycling industry creates 10x more jobs than landfill disposal. In the US alone, recycling supports over 1 million jobs and generates $236 billion in annual revenue.</p>
-            `
-          },
-          '3': {
-            id: '3',
-            title: 'Water Conservation: Every Drop Counts',
-            category: 'Water Conservation',
-            description: 'Master water conservation techniques with practical solutions for home, garden, and daily life.',
-            duration: '30 min',
-            difficulty: 'Intermediate',
-            xp: 25,
-            content: `
-              <h2>The Global Water Crisis</h2>
-              <p>Water is the most precious resource on Earth, yet 2.2 billion people lack access to safe drinking water. By 2050, half the world's population could face water scarcity.</p>
-              
-              <h2>Understanding Water Scarcity</h2>
-              <p>Only 2.5% of Earth's water is freshwater, and only 1% is easily accessible. The average American uses 80-100 gallons of water daily, while the recommended minimum is 13 gallons.</p>
-              
-              <h2>Indoor Water Conservation Strategies</h2>
-              <h3>Bathroom (Largest Water User):</h3>
-              <ul>
-                <li><strong>Fix leaks immediately:</strong> A dripping faucet wastes 20+ gallons daily</li>
-                <li><strong>Install low-flow fixtures:</strong> Can reduce water use by 30-50%</li>
-                <li><strong>Shower smarter:</strong> 5-minute showers use 25 gallons vs 75 for baths</li>
-                <li><strong>Turn off taps:</strong> Save 8 gallons per minute while brushing teeth</li>
-                <li><strong>Toilet tips:</strong> "If it's yellow, let it mellow" saves significant water</li>
-              </ul>
-              
-              <h3>Kitchen Solutions:</h3>
-              <ul>
-                <li><strong>Full loads only:</strong> Dishwashers are more efficient than hand washing</li>
-                <li><strong>Smart cooking:</strong> Steam vegetables instead of boiling</li>
-                <li><strong>Keep water cold:</strong> Keep pitcher in fridge instead of running tap</li>
-                <li><strong>Wash produce in bowls:</strong> Instead of running water</li>
-              </ul>
-              
-              <h3>Laundry Room:</h3>
-              <ul>
-                <li><strong>Full loads:</strong> Wait until you have full laundry loads</li>
-                <li><strong>Cold water washing:</strong> Heats water uses 90% of washer energy</li>
-                <li><strong>Energy Star appliances:</strong> Use 40% less water than standard models</li>
-              </ul>
-              
-              <h2>Outdoor Water Conservation</h2>
-              <h3>Smart Gardening:</h3>
-              <ul>
-                <li><strong>Water timing:</strong> Early morning or late evening reduces evaporation</li>
-                <li><strong>Native plants:</strong> Require 50% less water than exotic species</li>
-                <li><strong>Drip irrigation:</strong> 90% efficient vs 50% for sprinklers</li>
-                <li><strong>Mulching:</strong> Reduces evaporation by 70%</li>
-                <li><strong>Rain barrels:</strong> Collect rainwater for garden use</li>
-              </ul>
-              
-              <h2>Water Footprint: The Hidden Impact</h2>
-              <p>Everything we consume has a water footprint:</p>
-              <ul>
-                <li><strong>Beef burger:</strong> 660 gallons of water</li>
-                <li><strong>Cotton t-shirt:</strong> 2,700 gallons</li>
-                <li><strong>Smartphone:</strong> 3,190 gallons</li>
-                <li><strong>Car:</strong> 39,000 gallons</li>
-              </ul>
-              
-              <h2>Advanced Conservation Techniques</h2>
-              <ul>
-                <li><strong>Greywater systems:</strong> Reuse sink water for irrigation</li>
-                <li><strong>Rainwater harvesting:</strong> Collect and store rainwater</li>
-                <li><strong>Xeriscaping:</strong> Landscaping designed for low water use</li>
-                <li><strong>Smart irrigation controllers:</strong> Weather-based watering</li>
-              </ul>
-              
-              <h2>Real-World Success Stories</h2>
-              <p><strong>Singapore:</strong> Recycles 40% of water through advanced treatment. <strong>Israel:</strong> 80% of wastewater is recycled for agriculture. These examples show what's possible with commitment and technology.</p>
-            `
-          },
-          '4': {
-            id: '4',
-            title: 'Climate Change: Understanding Our Impact',
-            category: 'Climate Change',
-            description: 'Comprehensive guide to climate change science, impacts, and actionable solutions for individuals.',
-            duration: '35 min',
-            difficulty: 'Intermediate',
-            xp: 30,
-            content: `
-              <h2>What is Climate Change?</h2>
-              <p>Climate change refers to long-term shifts in global temperatures and weather patterns. While natural factors have influenced Earth's climate throughout history, human activities have been the dominant driver since the Industrial Revolution.</p>
-              
-              <h2>The Science Behind Climate Change</h2>
-              <p><strong>Greenhouse Effect:</strong> Gases like CO2, methane, and nitrous oxide trap heat in Earth's atmosphere. Human activities have increased these gases by 40% since pre-industrial times.</p>
-              
-              <p><strong>Key Statistics:</strong></p>
-              <ul>
-                <li>Global temperature has risen 1.1°C since 1880</li>
-                <li>CO2 levels are at 420 ppm</li>
-              </ul>
-            `
-          }
-        }
-        setLesson(enhancedLessons[id] || enhancedLessons['1'])
+        const fallback = LESSONS_DATA.find(l => l.id === id) || LESSONS_DATA[0]
+        setLesson(fallback)
       } finally {
         setLoading(false)
       }
     }
 
     fetchLesson()
-  }, [id])
+  }, [id, currentUser])
 
-  async function handleComplete() {
-    if (!currentUser || !lesson) return
+  async function handleMarkLessonComplete() {
+    if (!currentUser || !lesson || completed) return
 
     try {
       const { data: existing } = await supabase
@@ -268,6 +98,8 @@ export default function LessonDetail() {
         .eq('lesson_id', lesson.id)
         .maybeSingle()
 
+      const baseLessonXp = Number(lesson.xp) || 20
+
       if (!existing) {
         await supabase.from('user_lessons').insert({
           user_id: currentUser.id,
@@ -275,7 +107,7 @@ export default function LessonDetail() {
           completed: true
         })
 
-        const xpGain = Number(lesson.xp) || 0
+        // Award base XP to user
         const { data: userDoc } = await supabase
           .from('users')
           .select('xp, level, badges')
@@ -283,13 +115,13 @@ export default function LessonDetail() {
           .maybeSingle()
 
         if (userDoc) {
-          const newXp = (userDoc.xp || 0) + xpGain
+          const newXp = (userDoc.xp || 0) + baseLessonXp
           const newLevel = Math.max(1, Math.floor(newXp / 200) + 1)
           const currentBadges = userDoc.badges || []
-          const newBadges = currentBadges.length > 0 ? [...currentBadges] : []
+          const newBadges = [...currentBadges]
 
-          if (!currentBadges.some(b => b.name === 'Knowledge Seeker')) {
-            newBadges.push({ name: 'Knowledge Seeker', emoji: '📚' })
+          if (!newBadges.some(b => b.name === 'Knowledge Seeker')) {
+            newBadges.push({ name: 'Knowledge Seeker', emoji: '📚', description: 'Completed first environmental lesson' })
           }
 
           await supabase
@@ -299,10 +131,108 @@ export default function LessonDetail() {
         }
       }
 
+      setAwardedXp(baseLessonXp)
       setCompleted(true)
     } catch (error) {
-      console.error('Error completing lesson:', error)
+      console.error('Error marking lesson complete:', error)
+      setCompleted(true)
     }
+  }
+
+  function handleStartQuiz() {
+    setQuizState('active')
+    setCurrentQuestionIndex(0)
+    setSelectedOption(null)
+    setIsAnswerSubmitted(false)
+    setUserAnswers([])
+    setQuizScore(0)
+  }
+
+  function handleSelectOption(optionIndex) {
+    if (isAnswerSubmitted) return
+    setSelectedOption(optionIndex)
+  }
+
+  function handleSubmitAnswer() {
+    if (selectedOption === null || isAnswerSubmitted || !lesson?.quiz) return
+
+    const currentQuestion = lesson.quiz[currentQuestionIndex]
+    const isCorrect = selectedOption === currentQuestion.correctIndex
+
+    const answerRecord = {
+      questionId: currentQuestion.id || currentQuestionIndex,
+      selectedIndex: selectedOption,
+      isCorrect
+    }
+
+    setUserAnswers(prev => [...prev, answerRecord])
+    setIsAnswerSubmitted(true)
+  }
+
+  async function handleNextQuestion() {
+    if (!lesson?.quiz) return
+
+    if (currentQuestionIndex + 1 < lesson.quiz.length) {
+      setCurrentQuestionIndex(prev => prev + 1)
+      setSelectedOption(null)
+      setIsAnswerSubmitted(false)
+    } else {
+      // Quiz finished - calculate score and bonus XP
+      const finalAnswers = [...userAnswers]
+      const totalCorrect = finalAnswers.filter(a => a.isCorrect).length
+      setQuizScore(totalCorrect)
+      setQuizState('finished')
+
+      // Calculate quiz bonus XP: 10 XP per correct answer
+      const bonus = totalCorrect * 10
+      setBonusEarned(bonus)
+
+      // Also ensure lesson is marked complete and XP added
+      if (currentUser) {
+        try {
+          const totalReward = (completed ? 0 : Number(lesson.xp) || 20) + bonus
+          
+          await supabase.from('user_lessons').upsert({
+            user_id: currentUser.id,
+            lesson_id: lesson.id,
+            completed: true
+          })
+
+          const { data: userDoc } = await supabase
+            .from('users')
+            .select('xp, level, badges')
+            .eq('id', currentUser.id)
+            .maybeSingle()
+
+          if (userDoc) {
+            const newXp = (userDoc.xp || 0) + totalReward
+            const newLevel = Math.max(1, Math.floor(newXp / 200) + 1)
+            const currentBadges = userDoc.badges || []
+            const newBadges = [...currentBadges]
+
+            if (!newBadges.some(b => b.name === 'Knowledge Seeker')) {
+              newBadges.push({ name: 'Knowledge Seeker', emoji: '📚', description: 'Completed first environmental lesson' })
+            }
+            if (totalCorrect === lesson.quiz.length && !newBadges.some(b => b.name === 'Eco Ace')) {
+              newBadges.push({ name: 'Eco Ace', emoji: '🌟', description: 'Scored 100% on a lesson quiz' })
+            }
+
+            await supabase
+              .from('users')
+              .update({ xp: newXp, level: newLevel, badges: newBadges })
+              .eq('id', currentUser.id)
+          }
+
+          setCompleted(true)
+        } catch (err) {
+          console.error('Error saving quiz reward to Supabase:', err)
+        }
+      }
+    }
+  }
+
+  function handleRetakeQuiz() {
+    handleStartQuiz()
   }
 
   if (loading) {
@@ -316,96 +246,333 @@ export default function LessonDetail() {
   if (!lesson) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center">
-          <BookOpen className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500">Lesson not found</p>
+        <div className="text-center bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
+          <BookOpen className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+          <h2 className="text-xl font-bold text-slate-800">Lesson Not Found</h2>
+          <p className="text-slate-500 mt-2">The requested lesson could not be loaded.</p>
+          <button
+            onClick={() => navigate('/lessons')}
+            className="mt-4 inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Lessons
+          </button>
         </div>
       </div>
     )
   }
 
+  const quizQuestions = lesson.quiz || []
+  const currentQuestion = quizQuestions[currentQuestionIndex]
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <button
         onClick={() => navigate('/lessons')}
-        className="flex items-center text-slate-600 hover:text-green-600 mb-6 transition-colors"
+        className="flex items-center text-slate-600 hover:text-green-600 mb-6 transition-colors font-medium text-sm"
       >
-        <ArrowLeft className="h-5 w-5 mr-2" />
-        Back to Lessons
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Lessons Catalog
       </button>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {/* Lesson Main Card */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 border-b border-slate-200">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mb-3">
-                {lesson.category}
+        <div className="bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 p-6 sm:p-8 border-b border-slate-200">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+              {lesson.category}
+            </span>
+            <div className="flex items-center space-x-2">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                lesson.difficulty === 'Beginner' ? 'bg-green-100 text-green-800' :
+                lesson.difficulty === 'Intermediate' ? 'bg-amber-100 text-amber-800' :
+                'bg-rose-100 text-rose-800'
+              }`}>
+                {lesson.difficulty}
               </span>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">
-                {lesson.title}
-              </h1>
-              <p className="text-slate-600">{lesson.description}</p>
+              {completed && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                  <CheckCircle className="h-3.5 w-3.5 mr-1" /> Completed
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center space-x-6 mt-4">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-3 tracking-tight">
+            {lesson.title}
+          </h1>
+          <p className="text-slate-600 leading-relaxed max-w-3xl">
+            {lesson.description}
+          </p>
+
+          <div className="flex flex-wrap items-center gap-6 mt-6 pt-6 border-t border-emerald-100 text-sm">
             <div className="flex items-center text-slate-600">
-              <Clock className="h-5 w-5 mr-2" />
-              {lesson.duration}
+              <Clock className="h-4 w-4 mr-2 text-emerald-600" />
+              <span>{lesson.duration}</span>
             </div>
-            <div className="flex items-center text-yellow-600">
-              <Target className="h-5 w-5 mr-2" />
-              {lesson.xp} XP
+            <div className="flex items-center text-amber-600 font-semibold">
+              <Target className="h-4 w-4 mr-2" />
+              <span>+{lesson.xp} Base XP</span>
             </div>
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              lesson.difficulty === 'Beginner' ? 'bg-green-100 text-green-800' :
-              lesson.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' :
-              'bg-red-100 text-red-800'
-            }`}>
-              {lesson.difficulty}
-            </span>
+            {quizQuestions.length > 0 && (
+              <div className="flex items-center text-blue-600 font-medium">
+                <HelpCircle className="h-4 w-4 mr-2" />
+                <span>{quizQuestions.length} Questions Quiz (+{quizQuestions.length * 10} XP Bonus)</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        {/* Content Body */}
+        <div className="p-6 sm:p-8">
           <div 
-            className="prose prose-slate max-w-none"
+            className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-headings:font-bold prose-p:text-slate-700 prose-p:leading-relaxed prose-li:text-slate-700"
             dangerouslySetInnerHTML={{ __html: lesson.content }}
           />
         </div>
 
-        {/* Footer */}
-        <div className="bg-slate-50 p-6 border-t border-slate-200">
-          {completed ? (
-            <div className="flex items-center justify-center text-green-600">
-              <CheckCircle className="h-6 w-6 mr-2" />
-              <span className="font-semibold">Lesson Completed! +{lesson.xp} XP earned</span>
-            </div>
-          ) : (
+        {/* Lesson Reading Completion Bar */}
+        <div className="bg-slate-50 p-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-slate-900">
+              {completed ? 'Lesson Completed' : 'Finished reading the material?'}
+            </p>
+            <p className="text-xs text-slate-500">
+              {completed 
+                ? 'Great job! You have earned the base knowledge points. Test your mastery with the quiz below.' 
+                : 'Mark as read to claim your XP, or take the interactive quiz directly.'}
+            </p>
+          </div>
+
+          {!completed ? (
             <button
-              onClick={handleComplete}
-              className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-semibold"
+              onClick={handleMarkLessonComplete}
+              className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold text-sm shadow-sm transition-colors"
             >
-              Mark as Complete
+              <CheckCircle className="h-4 w-4 mr-2" /> Mark as Read (+{lesson.xp} XP)
             </button>
+          ) : (
+            <div className="inline-flex items-center px-4 py-2 bg-emerald-100 text-emerald-800 rounded-lg text-sm font-semibold">
+              <CheckCircle className="h-4 w-4 mr-2 text-emerald-600" /> +{lesson.xp} XP Claimed
+            </div>
           )}
         </div>
       </div>
 
-      {/* Quiz Section */}
-      {!completed && (
-        <div className="mt-6 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h2 className="text-xl font-semibold text-slate-900 mb-4">
-            Quick Quiz
-          </h2>
-          <p className="text-slate-600 mb-4">
-            Test your knowledge to earn additional XP!
-          </p>
-          <button className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
-            Start Quiz (+{Math.round(lesson.xp * 0.5)} XP)
-          </button>
+      {/* Interactive Quiz Engine Section */}
+      {quizQuestions.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          {/* Quiz Header */}
+          <div className="bg-slate-900 text-white p-6 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 bg-emerald-500/20 rounded-xl text-emerald-400">
+                <HelpCircle className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">Interactive Knowledge Quiz</h2>
+                <p className="text-xs text-slate-400">Earn up to +{quizQuestions.length * 10} extra bonus XP</p>
+              </div>
+            </div>
+            {quizState === 'active' && (
+              <span className="text-xs font-semibold px-3 py-1 bg-slate-800 text-emerald-400 rounded-full border border-slate-700">
+                Question {currentQuestionIndex + 1} of {quizQuestions.length}
+              </span>
+            )}
+          </div>
+
+          {/* Quiz State: READY */}
+          {quizState === 'ready' && (
+            <div className="p-8 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="h-8 w-8" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Test Your Comprehension</h3>
+                <p className="text-slate-600 text-sm mb-6">
+                  Answer <strong>{quizQuestions.length} multiple-choice questions</strong> based on this lesson. Get instant explanations for each question and earn +10 XP for each correct answer!
+                </p>
+                <button
+                  onClick={handleStartQuiz}
+                  className="w-full inline-flex items-center justify-center px-6 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-md shadow-blue-600/20 transition-all text-sm"
+                >
+                  Start Knowledge Quiz (+{quizQuestions.length * 10} XP)
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Quiz State: ACTIVE */}
+          {quizState === 'active' && currentQuestion && (
+            <div className="p-6 sm:p-8">
+              {/* Progress Bar */}
+              <div className="w-full bg-slate-100 h-2 rounded-full mb-6 overflow-hidden">
+                <div 
+                  className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${((currentQuestionIndex + (isAnswerSubmitted ? 1 : 0)) / quizQuestions.length) * 100}%` }}
+                />
+              </div>
+
+              {/* Question Text */}
+              <div className="mb-6">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 mb-1 block">
+                  Question {currentQuestionIndex + 1}
+                </span>
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900">
+                  {currentQuestion.question}
+                </h3>
+              </div>
+
+              {/* Options List */}
+              <div className="space-y-3 mb-6">
+                {currentQuestion.options.map((option, idx) => {
+                  const isSelected = selectedOption === idx
+                  const isCorrect = idx === currentQuestion.correctIndex
+                  
+                  let optionStyle = "border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-800"
+
+                  if (isAnswerSubmitted) {
+                    if (isCorrect) {
+                      optionStyle = "border-emerald-500 bg-emerald-50 text-emerald-900 font-semibold"
+                    } else if (isSelected && !isCorrect) {
+                      optionStyle = "border-rose-500 bg-rose-50 text-rose-900 line-through"
+                    } else {
+                      optionStyle = "border-slate-200 text-slate-400 opacity-60"
+                    }
+                  } else if (isSelected) {
+                    optionStyle = "border-blue-600 bg-blue-50 text-blue-900 font-medium ring-2 ring-blue-600/20"
+                  }
+
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => handleSelectOption(idx)}
+                      disabled={isAnswerSubmitted}
+                      className={`w-full p-4 text-left rounded-xl border transition-all flex items-start justify-between ${optionStyle}`}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0 ${
+                          isSelected && !isAnswerSubmitted ? 'bg-blue-600 text-white' :
+                          isAnswerSubmitted && isCorrect ? 'bg-emerald-600 text-white' :
+                          isAnswerSubmitted && isSelected && !isCorrect ? 'bg-rose-600 text-white' :
+                          'bg-slate-100 text-slate-600'
+                        }`}>
+                          {String.fromCharCode(65 + idx)}
+                        </span>
+                        <span className="text-sm leading-relaxed">{option}</span>
+                      </div>
+
+                      {isAnswerSubmitted && isCorrect && (
+                        <Check className="h-5 w-5 text-emerald-600 shrink-0 ml-2" />
+                      )}
+                      {isAnswerSubmitted && isSelected && !isCorrect && (
+                        <X className="h-5 w-5 text-rose-600 shrink-0 ml-2" />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Instant Explanation Box */}
+              {isAnswerSubmitted && (
+                <div className={`p-4 rounded-xl border mb-6 animate-fadeIn ${
+                  selectedOption === currentQuestion.correctIndex 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+                    : 'bg-amber-50 border-amber-200 text-amber-900'
+                }`}>
+                  <div className="flex items-start space-x-2.5">
+                    <div className="shrink-0 mt-0.5">
+                      {selectedOption === currentQuestion.correctIndex ? (
+                        <CheckCircle className="h-5 w-5 text-emerald-600" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-amber-600" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-1">
+                        {selectedOption === currentQuestion.correctIndex ? 'Correct! 🌟 (+10 XP)' : 'Explanation'}
+                      </p>
+                      <p className="text-sm leading-relaxed">
+                        {currentQuestion.explanation}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-end">
+                {!isAnswerSubmitted ? (
+                  <button
+                    onClick={handleSubmitAnswer}
+                    disabled={selectedOption === null}
+                    className={`px-6 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                      selectedOption !== null 
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20' 
+                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Check Answer
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleNextQuestion}
+                    className="px-6 py-2.5 bg-blue-600 text-white hover:bg-blue-700 font-semibold text-sm rounded-xl shadow-md shadow-blue-600/20 flex items-center transition-all"
+                  >
+                    <span>{currentQuestionIndex + 1 < quizQuestions.length ? 'Next Question' : 'View Results'}</span>
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Quiz State: FINISHED */}
+          {quizState === 'finished' && (
+            <div className="p-8 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center mx-auto mb-4 ring-8 ring-amber-50">
+                  <Award className="h-10 w-10" />
+                </div>
+                
+                <h3 className="text-2xl font-black text-slate-900 mb-1">
+                  Quiz Completed!
+                </h3>
+                <p className="text-slate-500 text-sm mb-6">
+                  You scored <strong className="text-slate-900">{quizScore} out of {quizQuestions.length}</strong> correct ({Math.round((quizScore / quizQuestions.length) * 100)}%)
+                </p>
+
+                {/* Score & XP Rewards Banner */}
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-5 mb-6 text-left">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-slate-700">Quiz Bonus XP Earned:</span>
+                    <span className="text-lg font-black text-emerald-600">+{bonusEarned} XP</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-emerald-100">
+                    <span className="text-xs text-slate-600">Lesson Mastery Status:</span>
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      {quizScore === quizQuestions.length ? '🌟 Perfect Score' : '✅ Verified'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button
+                    onClick={handleRetakeQuiz}
+                    className="inline-flex items-center justify-center px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-medium text-sm transition-colors"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" /> Retake Quiz
+                  </button>
+                  <button
+                    onClick={() => navigate('/lessons')}
+                    className="inline-flex items-center justify-center px-6 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 font-semibold text-sm shadow-md shadow-green-600/20 transition-colors"
+                  >
+                    Explore More Lessons
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

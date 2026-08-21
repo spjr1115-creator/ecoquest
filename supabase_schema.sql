@@ -27,8 +27,12 @@ CREATE TABLE IF NOT EXISTS public.lessons (
   difficulty TEXT,
   xp INTEGER DEFAULT 0,
   content TEXT,
+  quiz JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migration safety for existing deployments
+ALTER TABLE public.lessons ADD COLUMN IF NOT EXISTS quiz JSONB DEFAULT '[]'::jsonb;
 
 -- 3. Challenges Table
 CREATE TABLE IF NOT EXISTS public.challenges (
@@ -67,11 +71,127 @@ CREATE TABLE IF NOT EXISTS public.user_challenges (
   submitted_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Starter content makes a newly connected project immediately usable.
-INSERT INTO public.lessons (id, title, category, description, duration, difficulty, xp, content) VALUES
-  ('lesson-waste-basics', 'Waste Management Basics', 'Waste Management', 'Learn to reduce, reuse, recycle, and compost everyday waste.', '15 min', 'Beginner', 20, '<h2>Start with the 5Rs</h2><p>Refuse unnecessary items, reduce what you use, reuse what you own, repurpose creatively, and recycle correctly.</p>'),
-  ('lesson-water', 'Every Drop Counts', 'Water Conservation', 'Simple habits that protect water at home and school.', '20 min', 'Beginner', 25, '<h2>Conserve water daily</h2><p>Turn off taps when not in use, repair leaks, and use only the water you need.</p>')
-ON CONFLICT (id) DO NOTHING;
+-- Comprehensive Curriculum Seed Data (10 Categories with Detailed Content & Quizzes)
+INSERT INTO public.lessons (id, title, category, description, duration, difficulty, xp, content, quiz) VALUES
+  (
+    'lesson-waste-mgmt-101',
+    'Zero Waste Principles & 5Rs Mastery',
+    'Waste Management',
+    'Explore the circular economy hierarchy and master the 5Rs (Refuse, Reduce, Reuse, Repurpose, Recycle) to eliminate landfill waste.',
+    '20 min',
+    'Beginner',
+    30,
+    '<h2>1. The Global Waste Dilemma</h2><p>Humanity currently generates over 2.01 billion metric tons of municipal solid waste annually. Linear models ("Take-Make-Dispose") pollute ecosystems.</p><h2>The 5Rs Hierarchy</h2><ul><li><strong>Refuse:</strong> Say no to disposables.</li><li><strong>Reduce:</strong> Buy only what you need.</li><li><strong>Reuse:</strong> Choose durable items.</li><li><strong>Repurpose:</strong> Upcycle creatively.</li><li><strong>Recycle:</strong> Process cleanly as a last resort.</li></ul>',
+    '[{"id":"q1","question":"Which of the 5Rs is considered the FIRST and most effective step in waste prevention?","options":["Recycle","Refuse","Repurpose","Reuse"],"correctIndex":1,"explanation":"Refusing unnecessary items at the source prevents waste from ever being created."},{"id":"q2","question":"Why is organic waste in airtight landfills particularly harmful to the climate?","options":["It turns into radioactive residue","Anaerobic decomposition generates potent methane gas (CH4)","It absorbs too much carbon from the sky","It freezes the surrounding soil"],"correctIndex":1,"explanation":"In oxygen-deprived landfills, organic matter decomposes anaerobically to produce potent methane."},{"id":"q3","question":"What is the primary difference between a linear economy and a circular economy?","options":["Linear economies produce no goods","Linear follows Take-Make-Dispose while circular designs out waste","Linear relies only on solar","No difference"],"correctIndex":1,"explanation":"Circular economies keep resources in continuous use and regenerate natural systems."}]'::jsonb
+  ),
+  (
+    'lesson-recycling-mastery',
+    'Advanced Material Recycling & Contamination Prevention',
+    'Recycling',
+    'Learn resin identification codes, how to prevent "wishcycling", and how proper sorting preserves high-grade recyclable polymers.',
+    '22 min',
+    'Beginner',
+    35,
+    '<h2>Resin Codes & Infinite Recycling</h2><p>Plastics have codes #1 to #7. Aluminum and glass can be recycled infinitely with 95% energy savings.</p><h2>Avoid Wishcycling</h2><p>Never put greasy cardboard or plastic bags into single-stream recycling bins.</p>',
+    '[{"id":"q1","question":"What is wishcycling?","options":["Wishing before buying plastic","Throwing non-recyclables into the bin hoping they get recycled, causing contamination and damage","Trading plastic for cash","Recycling only on holidays"],"correctIndex":1,"explanation":"Wishcycling introduces contaminants that can ruin entire batches of recyclable materials."},{"id":"q2","question":"How much energy is saved by recycling aluminum cans vs virgin ore smelting?","options":["20%","50%","95%","0%"],"correctIndex":2,"explanation":"Recycling aluminum saves 95% of energy and emissions compared to primary bauxite smelting."}]'::jsonb
+  ),
+  (
+    'lesson-water-conservation',
+    'Hydrology & Water Footprint Reduction',
+    'Water Conservation',
+    'Understand accessible freshwater limits, calculate embedded virtual water in everyday commodities, and implement residential conservation.',
+    '25 min',
+    'Intermediate',
+    40,
+    '<h2>Freshwater Limits</h2><p>Less than 1% of planetary water is accessible freshwater. Virtual water accounts for thousands of liters in clothes, food, and electronics.</p><h2>Smart Conservation</h2><p>Install faucet aerators and fix silent toilet leaks to save thousands of liters annually.</p>',
+    '[{"id":"q1","question":"What percentage of planetary water is accessible liquid freshwater?","options":["25%","10%","Less than 1%","50%"],"correctIndex":2,"explanation":"Over 97% is ocean saltwater and most freshwater is locked in polar ice."},{"id":"q2","question":"What is virtual water?","options":["Water in video games","The hidden volume of freshwater consumed in the production of goods","Bottled water online","Air conditioner condensation"],"correctIndex":1,"explanation":"Virtual water measures all embedded water used throughout a product lifecycle."}]'::jsonb
+  ),
+  (
+    'lesson-clean-energy',
+    'Energy Efficiency, Grid Dynamics & Clean Power',
+    'Energy Conservation',
+    'Master power auditing, eliminate vampire loads, and understand the transition from fossil base-load generation to distributed renewable microgrids.',
+    '22 min',
+    'Beginner',
+    35,
+    '<h2>Grid Decarbonization</h2><p>Power generation accounts for over 30% of emissions. Eliminating phantom vampire loads and switching to LEDs saves power immediately.</p>',
+    '[{"id":"q1","question":"What is vampire power?","options":["Electricity at night","Power drawn by electronics while in standby mode or turned off","Solar stored underground","Lightning strikes"],"correctIndex":1,"explanation":"Vampire power or phantom load is idle power drawn by dormant plugged-in appliances."},{"id":"q2","question":"How much less power do LEDs use compared to incandescent bulbs?","options":["10%","40%","80-90%","They use more"],"correctIndex":2,"explanation":"LEDs convert up to 90% of electricity into visible light rather than heat."}]'::jsonb
+  ),
+  (
+    'lesson-climate-action',
+    'Climate Science, Carbon Budgets & Tipping Points',
+    'Climate Change',
+    'Examine radiative forcing, IPCC global warming projections, critical planetary tipping elements, and paths to Net Zero.',
+    '30 min',
+    'Intermediate',
+    45,
+    '<h2>Climate Physics</h2><p>Atmospheric CO2 has increased past 420 ppm. Meeting the 1.5°C goal requires global Net Zero emissions by 2050.</p>',
+    '[{"id":"q1","question":"What is the current atmospheric CO2 concentration compared to pre-industrial 280 ppm?","options":["310 ppm","350 ppm","Over 420 ppm","800 ppm"],"correctIndex":2,"explanation":"Atmospheric CO2 has passed 420 ppm due to fossil combustion and land-use change."},{"id":"q2","question":"By when must global emissions reach Net Zero for 1.5°C warming threshold?","options":["2030","2050","2100","2150"],"correctIndex":1,"explanation":"IPCC models indicate global net zero CO2 emissions by 2050 are vital."}]'::jsonb
+  ),
+  (
+    'lesson-biodiversity-protection',
+    'Ecosystem Services, Keystone Species & Rewilding',
+    'Biodiversity',
+    'Discover trophic cascades, the critical roles of pollinator networks, and how native rewilding restores ecological equilibrium.',
+    '24 min',
+    'Intermediate',
+    35,
+    '<h2>The Web of Life</h2><p>Over 75% of leading food crops depend on insect pollinators. Keystone species anchor entire ecological communities.</p>',
+    '[{"id":"q1","question":"What is a keystone species?","options":["The most abundant animal","A species with a disproportionately large impact on ecosystem balance","An animal that builds stone nests","Invasive pest"],"correctIndex":1,"explanation":"Keystone species hold ecological communities together; their removal causes ecosystem shifts."}]'::jsonb
+  ),
+  (
+    'lesson-sustainable-transport',
+    'Low-Carbon Mobility, Active Transit & 15-Minute Cities',
+    'Sustainable Transportation',
+    'Compare well-to-wheel transport emissions, analyze urban micro-mobility, and discover how 15-minute city designs decarbonize transit.',
+    '20 min',
+    'Beginner',
+    30,
+    '<h2>Decarbonizing Mobility</h2><p>Transport causes ~25% of energy emissions. Shifting short urban trips to walking, cycling, and electric transit slashes emissions.</p>',
+    '[{"id":"q1","question":"What is the core premise of a 15-Minute City?","options":["Car trips are limited to 15 min","All essential daily amenities are accessible within a 15-minute walk or bike ride","Transit runs 15 min daily","Speed limit 15 km/h"],"correctIndex":1,"explanation":"15-minute cities prioritize compact urban design so daily needs are reached actively without cars."}]'::jsonb
+  ),
+  (
+    'lesson-ewaste-crisis',
+    'Electronic Waste & Circular Hardware',
+    'E-Waste',
+    'Investigate the growing e-waste stream, toxic heavy metal leakage, urban mining of critical minerals, and the Right to Repair movement.',
+    '22 min',
+    'Intermediate',
+    35,
+    '<h2>Electronic Waste Challenges</h2><p>Over 62 million metric tons of e-waste are produced annually. Urban mining recovers gold and rare earths without destructive open-pit mining.</p>',
+    '[{"id":"q1","question":"What does the Right to Repair movement advocate for?","options":["Everyone must become an electrician","Fair access to replacement parts, manuals, and diagnostic tools","Banning computers","Stopping second-hand sales"],"correctIndex":1,"explanation":"Right to Repair enables users to fix and maintain equipment to reduce electronic waste."}]'::jsonb
+  ),
+  (
+    'lesson-plastic-pollution',
+    'Microplastics, Ocean Gyres & Plastic-Free Living',
+    'Plastic Pollution',
+    'Examine primary vs secondary microplastics, marine trophic accumulation, ocean gyres, and scalable plastic-free alternatives.',
+    '25 min',
+    'Intermediate',
+    40,
+    '<h2>The Microplastic Challenge</h2><p>Particles under 5mm persist in water and food webs for centuries. Eliminate single-use plastics and filter synthetic laundry fibers.</p>',
+    '[{"id":"q1","question":"What is a microplastic?","options":["Any bottle under 1 liter","Plastic particles under 5 millimeters in diameter","Plastics in nano labs","Cornstarch bags"],"correctIndex":1,"explanation":"Microplastics are defined as synthetic polymer particles smaller than 5 mm."}]'::jsonb
+  ),
+  (
+    'lesson-sustainable-living',
+    'Ethical Sourcing, Fast Fashion & Conscious Consumerism',
+    'Sustainable Consumption',
+    'Learn life cycle assessments, uncover fast fashion supply chain impacts, detect greenwashing, and embrace conscious consumerism.',
+    '22 min',
+    'Intermediate',
+    35,
+    '<h2>Conscious Consumerism</h2><p>Fashion accounts for ~10% of global carbon emissions. Spot greenwashing, adopt the 30-wear rule, and support Cradle-to-Cradle designs.</p>',
+    '[{"id":"q1","question":"What is Greenwashing?","options":["Cleaning panels with soap","Deceptive marketing that exaggerates or fakes environmental credentials","Washing in cold water","Painting buildings green"],"correctIndex":1,"explanation":"Greenwashing falsely portrays products or organizations as sustainable without evidence."}]'::jsonb
+  )
+ON CONFLICT (id) DO UPDATE SET
+  title = EXCLUDED.title,
+  category = EXCLUDED.category,
+  description = EXCLUDED.description,
+  duration = EXCLUDED.duration,
+  difficulty = EXCLUDED.difficulty,
+  xp = EXCLUDED.xp,
+  content = EXCLUDED.content,
+  quiz = EXCLUDED.quiz;
 
 INSERT INTO public.challenges (id, title, category, description, difficulty, xp, impact_value, deadline, status, instructions) VALUES
   ('challenge-plastic-free', 'Plastic-Free Day', 'Plastic Pollution', 'Avoid single-use plastic for a day and document your reusable alternatives.', 'Medium', 100, 5, '2027-12-31', 'active', '<h2>Your mission</h2><ol><li>Carry a reusable bottle and bag.</li><li>Avoid disposable cutlery and packaging.</li><li>Submit a short reflection and optional photo.</li></ol>'),
@@ -91,11 +211,13 @@ DROP POLICY IF EXISTS "Users can create their own profile" ON public.users;
 DROP POLICY IF EXISTS "Public can read users for leaderboard" ON public.users;
 DROP POLICY IF EXISTS "Anyone can read lessons" ON public.lessons;
 DROP POLICY IF EXISTS "Teachers and admins can insert lessons" ON public.lessons;
+DROP POLICY IF EXISTS "Teachers and admins can update lessons" ON public.lessons;
 DROP POLICY IF EXISTS "Anyone can read challenges" ON public.challenges;
 DROP POLICY IF EXISTS "Teachers and admins can insert challenges" ON public.challenges;
 DROP POLICY IF EXISTS "Teachers and admins can update challenges" ON public.challenges;
 DROP POLICY IF EXISTS "Users can view their own lesson progress" ON public.user_lessons;
 DROP POLICY IF EXISTS "Users can insert their own lesson progress" ON public.user_lessons;
+DROP POLICY IF EXISTS "Users can update their own lesson progress" ON public.user_lessons;
 DROP POLICY IF EXISTS "Users can view their own submissions" ON public.user_challenges;
 DROP POLICY IF EXISTS "Users can insert their own submissions" ON public.user_challenges;
 DROP POLICY IF EXISTS "Teachers and admins can view submissions" ON public.user_challenges;
@@ -112,6 +234,9 @@ CREATE POLICY "Anyone can read lessons" ON public.lessons FOR SELECT USING (true
 CREATE POLICY "Teachers and admins can insert lessons" ON public.lessons FOR INSERT WITH CHECK (
   EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('teacher', 'admin'))
 );
+CREATE POLICY "Teachers and admins can update lessons" ON public.lessons FOR UPDATE USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('teacher', 'admin'))
+);
 
 -- Challenges policies
 CREATE POLICY "Anyone can read challenges" ON public.challenges FOR SELECT USING (true);
@@ -125,6 +250,7 @@ CREATE POLICY "Teachers and admins can update challenges" ON public.challenges F
 -- User lessons policies
 CREATE POLICY "Users can view their own lesson progress" ON public.user_lessons FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert their own lesson progress" ON public.user_lessons FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update their own lesson progress" ON public.user_lessons FOR UPDATE USING (auth.uid() = user_id);
 
 -- User challenges policies
 CREATE POLICY "Users can view their own submissions" ON public.user_challenges FOR SELECT USING (auth.uid() = user_id);
@@ -255,7 +381,6 @@ BEGIN
   -- Because of ON DELETE CASCADE, this will also delete the public.users record and related data.
   DELETE FROM auth.users WHERE id = p_user_id;
   
-  -- We don't check NOT FOUND here because auth.users might behave differently, but if we get here, it succeeded.
   RETURN jsonb_build_object('success', true, 'user_id', p_user_id, 'deleted', true);
 END;
 $$;
