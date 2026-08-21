@@ -16,14 +16,14 @@ export default function Approvals() {
             proof_text,
             proof_url,
             status,
-            created_at,
+            submitted_at,
             user_id,
             challenge_id,
             users:user_id (name, email),
             challenges:challenge_id (title, xp)
           `)
           .eq('status', 'pending')
-          .order('created_at', { ascending: false })
+          .order('submitted_at', { ascending: false })
 
         if (error) throw error
 
@@ -33,7 +33,7 @@ export default function Approvals() {
           studentName: sub.users?.name || sub.users?.email || 'Unknown Student',
           evidence: sub.proof_text,
           proofUrl: sub.proof_url,
-          submittedAt: sub.created_at,
+          submittedAt: sub.submitted_at,
           userId: sub.user_id,
           challengeId: sub.challenge_id
         }))
