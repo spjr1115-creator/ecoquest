@@ -194,9 +194,24 @@ ON CONFLICT (id) DO UPDATE SET
   quiz = EXCLUDED.quiz;
 
 INSERT INTO public.challenges (id, title, category, description, difficulty, xp, impact_value, deadline, status, instructions) VALUES
-  ('challenge-plastic-free', 'Plastic-Free Day', 'Plastic Pollution', 'Avoid single-use plastic for a day and document your reusable alternatives.', 'Medium', 100, 5, '2027-12-31', 'active', '<h2>Your mission</h2><ol><li>Carry a reusable bottle and bag.</li><li>Avoid disposable cutlery and packaging.</li><li>Submit a short reflection and optional photo.</li></ol>'),
-  ('challenge-water-saver', 'Water Saver Week', 'Water Conservation', 'Maintain three water-saving habits during the week.', 'Easy', 75, 4, '2027-12-31', 'active', '<h2>Your mission</h2><ol><li>Keep showers under five minutes.</li><li>Turn off taps while brushing.</li><li>Tell us which habits you maintained.</li></ol>')
-ON CONFLICT (id) DO NOTHING;
+  ('challenge-waste-mgmt', 'Zero Waste Week', 'Waste Management', 'Apply the 5Rs to eliminate household waste for an entire week.', 'Hard', 200, 10, '2027-12-31', 'active', '<h2>Your mission</h2><ol><li>Track all trash produced in your household.</li><li>Refuse, reduce, reuse, and compost.</li><li>Take a photo of your minimized weekly trash.</li></ol>'),
+  ('challenge-recycling', 'Master Sorter', 'Recycling', 'Perfectly sort your household recycling to avoid contamination.', 'Medium', 100, 5, '2027-12-31', 'active', '<h2>Your mission</h2><ol><li>Identify local recycling guidelines.</li><li>Ensure all items are clean and dry.</li><li>Provide a photo of your perfectly sorted bins.</li></ol>'),
+  ('challenge-water-saver', 'Water Saver Week', 'Water Conservation', 'Reduce your water consumption by taking shorter showers and fixing leaks.', 'Easy', 75, 4, '2027-12-31', 'active', '<h2>Your mission</h2><ol><li>Keep showers under 5 minutes.</li><li>Turn off taps while brushing teeth.</li><li>Take a photo of your shower timer or a fixed leak.</li></ol>'),
+  ('challenge-clean-energy', 'Vampire Slayer', 'Energy Conservation', 'Eliminate phantom power loads by unplugging unused electronics.', 'Medium', 100, 6, '2027-12-31', 'active', '<h2>Your mission</h2><ol><li>Audit your home for devices drawing standby power.</li><li>Unplug them or use a smart power strip.</li><li>Share a photo of the unplugged devices or power strip.</li></ol>'),
+  ('challenge-climate', 'Carbon Footprint Audit', 'Climate Change', 'Calculate your carbon footprint and commit to one major reduction.', 'Hard', 150, 8, '2027-12-31', 'active', '<h2>Your mission</h2><ol><li>Use an online calculator to find your footprint.</li><li>Identify your largest emissions source.</li><li>Submit a screenshot of your result and your reduction plan.</li></ol>'),
+  ('challenge-biodiversity', 'Rewilding Hero', 'Biodiversity', 'Plant native species or build a bee hotel to support local wildlife.', 'Hard', 200, 15, '2027-12-31', 'active', '<h2>Your mission</h2><ol><li>Research native plants or insect habitats for your area.</li><li>Plant them or construct a small habitat.</li><li>Upload a photo of your new biodiversity hotspot.</li></ol>'),
+  ('challenge-transport', 'Car-Free Commute', 'Sustainable Transportation', 'Use active transit (walk, bike) or public transport for all trips for 3 days.', 'Medium', 120, 10, '2027-12-31', 'active', '<h2>Your mission</h2><ol><li>Leave the car at home.</li><li>Walk, bike, or take the bus/train.</li><li>Share a photo of your sustainable commute.</li></ol>'),
+  ('challenge-ewaste', 'Right to Repair', 'E-Waste', 'Repair a broken electronic device or properly recycle old e-waste.', 'Medium', 150, 8, '2027-12-31', 'active', '<h2>Your mission</h2><ol><li>Find a broken item or old electronics.</li><li>Attempt to fix it, or drop it at a certified e-waste recycler.</li><li>Provide a photo of the repaired item or recycling receipt.</li></ol>'),
+  ('challenge-plastic-free', 'Plastic-Free Day', 'Plastic Pollution', 'Avoid single-use plastics entirely for 24 hours.', 'Medium', 100, 5, '2027-12-31', 'active', '<h2>Your mission</h2><ol><li>Carry a reusable bottle, cup, and bag.</li><li>Refuse plastic packaging and cutlery.</li><li>Submit a photo of your reusable alternatives in action.</li></ol>'),
+  ('challenge-consumption', 'Conscious Shopper', 'Sustainable Consumption', 'Buy nothing new (except food/essentials) for a week, or thrift an item.', 'Easy', 75, 4, '2027-12-31', 'active', '<h2>Your mission</h2><ol><li>Avoid fast fashion and unnecessary purchases.</li><li>If you must buy, buy secondhand.</li><li>Share a photo of a thrifted item or your empty shopping cart!</li></ol>')
+ON CONFLICT (id) DO UPDATE SET
+  title = EXCLUDED.title,
+  category = EXCLUDED.category,
+  description = EXCLUDED.description,
+  difficulty = EXCLUDED.difficulty,
+  xp = EXCLUDED.xp,
+  impact_value = EXCLUDED.impact_value,
+  instructions = EXCLUDED.instructions;
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;

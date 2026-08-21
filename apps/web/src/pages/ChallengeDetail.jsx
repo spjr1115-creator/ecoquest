@@ -267,6 +267,11 @@ export default function ChallengeDetail() {
       return
     }
 
+    if (!imageFile) {
+      setError('Please upload photographic evidence of your activity')
+      return
+    }
+
     setSubmitting(true)
 
     try {
@@ -417,7 +422,7 @@ export default function ChallengeDetail() {
 
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Upload evidence (optional)
+                    Upload evidence (required)
                   </label>
                   <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-lg hover:border-green-400 transition-colors">
                     <div className="space-y-1 text-center">
