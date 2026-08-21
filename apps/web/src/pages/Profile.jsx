@@ -3,6 +3,21 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../supabase/supabaseClient'
 import { User, Mail, Award, Zap, TrendingUp, Flame, Edit2, Save, X } from 'lucide-react'
 
+const ALL_BADGES = [
+  { name: 'Green Starter', emoji: '🌱', description: 'Complete your first challenge' },
+  { name: 'Eco Explorer', emoji: '🌿', description: 'Complete 5 challenges' },
+  { name: 'Planet Protector', emoji: '🌎', description: 'Complete 10 challenges' },
+  { name: 'Eco Streaker', emoji: '🔥', description: 'Maintain a 5-day streak' },
+  { name: 'Green Guardian', emoji: '🌳', description: 'Maintain a 30-day streak' },
+  { name: 'Green Achiever', emoji: '⚡', description: 'Earn 1,000 XP' },
+  { name: 'Eco Champion', emoji: '🏆', description: 'Earn 5,000 XP' },
+  { name: 'Earth Hero', emoji: '🌍', description: 'Reach 50 Impact Score' },
+  { name: 'Eco Warrior', emoji: '🚀', description: 'Complete a Hard difficulty challenge' },
+  { name: 'Sustainability Star', emoji: '💎', description: 'Reach Level 10' },
+  { name: 'Eco Master', emoji: '👑', description: 'Reach Level 20' },
+  { name: 'Green Leader', emoji: '🤝', description: 'Complete 20 challenges' }
+]
+
 export default function Profile() {
   const { currentUser, userRole } = useAuth()
   const [userData, setUserData] = useState(null)
@@ -215,7 +230,7 @@ export default function Profile() {
             />
           </div>
 
-          {/* Badges */}
+          {/* Badges Earned */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">
               Badges Earned
@@ -228,17 +243,42 @@ export default function Profile() {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {userData.badges?.map((badge, index) => (
-                  <div
-                    key={index}
-                    className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 text-center border border-green-200"
-                  >
-                    <div className="text-3xl mb-2">{badge.emoji || '🏆'}</div>
-                    <p className="text-sm font-medium text-slate-900">{badge.name}</p>
-                  </div>
-                ))}
+                {userData.badges?.map((badge, index) => {
+                  const masterBadge = ALL_BADGES.find(b => b.name === badge.name) || badge;
+                  return (
+                    <div
+                      key={index}
+                      className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 text-center border border-green-200"
+                      title={masterBadge.description || ''}
+                    >
+                      <div className="text-3xl mb-2">{masterBadge.emoji || '🏆'}</div>
+                      <p className="text-sm font-medium text-slate-900">{masterBadge.name}</p>
+                    </div>
+                  );
+                })}
               </div>
             )}
+          </div>
+
+          {/* Badges to Earn */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">
+              Badges to Earn
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {ALL_BADGES.filter(b => !(userData.badges || []).some(ub => ub.name === b.name)).map((badge, index) => (
+                <div
+                  key={index}
+                  className="bg-slate-50 rounded-lg p-4 flex items-center border border-slate-200 opacity-70 grayscale hover:grayscale-0 hover:opacity-100 transition-all cursor-default"
+                >
+                  <div className="text-3xl mr-4">{badge.emoji}</div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">{badge.name}</p>
+                    <p className="text-xs text-slate-500 mt-1">{badge.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Account Info */}

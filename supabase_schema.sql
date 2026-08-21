@@ -287,23 +287,84 @@ DECLARE
   submission public.user_challenges;
   reward_xp INTEGER;
   reward_impact INTEGER;
+  challenge_diff TEXT;
   updated_xp INTEGER;
+  user_rec RECORD;
+  new_badges JSONB;
+  completed_count INTEGER;
+  new_level INTEGER;
 BEGIN
   IF p_status NOT IN ('approved', 'rejected') THEN RAISE EXCEPTION 'Invalid review status'; END IF;
   IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('teacher', 'admin')) THEN RAISE EXCEPTION 'Only teachers and administrators can review submissions'; END IF;
+  
   SELECT * INTO submission FROM public.user_challenges WHERE id = p_submission_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Submission not found'; END IF;
   IF submission.status <> 'pending' THEN RAISE EXCEPTION 'This submission has already been reviewed'; END IF;
+  
   UPDATE public.user_challenges SET status = p_status WHERE id = p_submission_id;
+  
   IF p_status = 'approved' THEN
-    SELECT COALESCE(xp, 0), COALESCE(impact_value, 0) INTO reward_xp, reward_impact FROM public.challenges WHERE id = submission.challenge_id;
+    SELECT COALESCE(xp, 0), COALESCE(impact_value, 0), difficulty INTO reward_xp, reward_impact, challenge_diff FROM public.challenges WHERE id = submission.challenge_id;
+    
+    SELECT * INTO user_rec FROM public.users WHERE id = submission.user_id;
+    SELECT count(*) INTO completed_count FROM public.user_challenges WHERE user_id = submission.user_id AND status = 'approved';
+    
+    new_badges := COALESCE(user_rec.badges, '[]'::jsonb);
+    new_level := GREATEST(1, FLOOR((COALESCE(user_rec.xp, 0) + reward_xp) / 200.0)::INTEGER + 1);
+    
+    -- Evaluate achievements
+    IF completed_count >= 1 AND NOT (new_badges @> '[{"name": "Green Starter"}]') THEN
+      new_badges := new_badges || '[{"name": "Green Starter", "emoji": "🌱"}]'::jsonb;
+    END IF;
+    IF completed_count >= 5 AND NOT (new_badges @> '[{"name": "Eco Explorer"}]') THEN
+      new_badges := new_badges || '[{"name": "Eco Explorer", "emoji": "🌿"}]'::jsonb;
+    END IF;
+    IF completed_count >= 10 AND NOT (new_badges @> '[{"name": "Planet Protector"}]') THEN
+      new_badges := new_badges || '[{"name": "Planet Protector", "emoji": "🌎"}]'::jsonb;
+    END IF;
+    
+    IF (COALESCE(user_rec.streak, 0) + 1) >= 5 AND NOT (new_badges @> '[{"name": "Eco Streaker"}]') THEN
+      new_badges := new_badges || '[{"name": "Eco Streaker", "emoji": "🔥"}]'::jsonb;
+    END IF;
+    IF (COALESCE(user_rec.streak, 0) + 1) >= 30 AND NOT (new_badges @> '[{"name": "Green Guardian"}]') THEN
+      new_badges := new_badges || '[{"name": "Green Guardian", "emoji": "🌳"}]'::jsonb;
+    END IF;
+    
+    IF (COALESCE(user_rec.xp, 0) + reward_xp) >= 1000 AND NOT (new_badges @> '[{"name": "Green Achiever"}]') THEN
+      new_badges := new_badges || '[{"name": "Green Achiever", "emoji": "⚡"}]'::jsonb;
+    END IF;
+    IF (COALESCE(user_rec.xp, 0) + reward_xp) >= 5000 AND NOT (new_badges @> '[{"name": "Eco Champion"}]') THEN
+      new_badges := new_badges || '[{"name": "Eco Champion", "emoji": "🏆"}]'::jsonb;
+    END IF;
+    
+    IF (COALESCE(user_rec.impact_score, 0) + reward_impact) >= 50 AND NOT (new_badges @> '[{"name": "Earth Hero"}]') THEN
+      new_badges := new_badges || '[{"name": "Earth Hero", "emoji": "🌍"}]'::jsonb;
+    END IF;
+    
+    IF challenge_diff = 'Hard' AND NOT (new_badges @> '[{"name": "Eco Warrior"}]') THEN
+      new_badges := new_badges || '[{"name": "Eco Warrior", "emoji": "🚀"}]'::jsonb;
+    END IF;
+    
+    IF new_level >= 10 AND NOT (new_badges @> '[{"name": "Sustainability Star"}]') THEN
+      new_badges := new_badges || '[{"name": "Sustainability Star", "emoji": "💎"}]'::jsonb;
+    END IF;
+    IF new_level >= 20 AND NOT (new_badges @> '[{"name": "Eco Master"}]') THEN
+      new_badges := new_badges || '[{"name": "Eco Master", "emoji": "👑"}]'::jsonb;
+    END IF;
+    
+    IF completed_count >= 20 AND NOT (new_badges @> '[{"name": "Green Leader"}]') THEN
+      new_badges := new_badges || '[{"name": "Green Leader", "emoji": "🤝"}]'::jsonb;
+    END IF;
+
     UPDATE public.users
       SET xp = COALESCE(xp, 0) + reward_xp,
           impact_score = COALESCE(impact_score, 0) + reward_impact,
           streak = COALESCE(streak, 0) + 1,
-          level = GREATEST(1, FLOOR((COALESCE(xp, 0) + reward_xp) / 200.0)::INTEGER + 1)
+          level = new_level,
+          badges = new_badges
       WHERE id = submission.user_id RETURNING xp INTO updated_xp;
   END IF;
+  
   RETURN jsonb_build_object('id', p_submission_id, 'status', p_status, 'xp', COALESCE(updated_xp, 0));
 END;
 $$;

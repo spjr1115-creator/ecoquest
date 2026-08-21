@@ -171,55 +171,6 @@ export default function TeacherDashboard() {
       })
       if (reviewError) throw reviewError
 
-      if (status === 'approved') {
-        const submission = pendingSubmissions.find(s => s.id === submissionId)
-        if (submission?.userId && submission?.challengeId) {
-          const { data: challenge } = await supabase
-            .from('challenges')
-            .select('xp, impact_value')
-            .eq('id', submission.challengeId)
-            .maybeSingle()
-
-          if (challenge) {
-            const xpGain = Number(challenge.xp) || 0
-            const impactGain = Number(challenge.impact_value) || 0
-
-            const { data: existingUser } = await supabase
-              .from('users')
-              .select('xp, level, impact_score, streak, badges')
-              .eq('id', submission.userId)
-              .maybeSingle()
-
-            if (existingUser) {
-              const newXp = (existingUser.xp || 0) + xpGain
-              const newImpact = (existingUser.impact_score || 0) + impactGain
-              const newLevel = Math.max(1, Math.floor(newXp / 200) + 1)
-              const newStreak = (existingUser.streak || 0) + 1
-              const currentBadges = existingUser.badges || []
-              const newBadges = currentBadges.length > 0 ? [...currentBadges] : []
-
-              if (!currentBadges.some(b => b.name === 'Challenge Champion') && xpGain >= 100) {
-                newBadges.push({ name: 'Challenge Champion', emoji: '🏆' })
-              }
-              if (!currentBadges.some(b => b.name === 'Impact Maker') && newImpact >= 50) {
-                newBadges.push({ name: 'Impact Maker', emoji: '🌍' })
-              }
-
-              await supabase
-                .from('users')
-                .update({
-                  xp: newXp,
-                  level: newLevel,
-                  impact_score: newImpact,
-                  streak: newStreak,
-                  badges: newBadges
-                })
-                .eq('id', submission.userId)
-            }
-          }
-        }
-      }
-
       setPendingSubmissions(prev => prev.filter(sub => sub.id !== submissionId))
       setStats(prev => ({
         ...prev,
