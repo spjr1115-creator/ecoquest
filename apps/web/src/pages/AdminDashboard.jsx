@@ -13,6 +13,7 @@ import {
   FilePlus,
   X,
   Download,
+  Briefcase,
   Trash2,
   ChevronRight,
   Lock,
@@ -37,6 +38,7 @@ export default function AdminDashboard() {
   const [showInstModal, setShowInstModal] = useState(false)
   const [showReportsModal, setShowReportsModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [showPlacementModal, setShowPlacementModal] = useState(false)
 
   // Form States
   const [createSuccess, setCreateSuccess] = useState('')
@@ -45,6 +47,8 @@ export default function AdminDashboard() {
   })
   
   const [allUsers, setAllUsers] = useState([])
+  const [placementMaterials, setPlacementMaterials] = useState([])
+  const [newMaterial, setNewMaterial] = useState({ company_name: '', drive_link: '', description: '' })
   
   const [instSettings, setInstSettings] = useState({
     name: localStorage.getItem('inst_name') || 'EcoQuest Default Institution',
@@ -349,6 +353,9 @@ export default function AdminDashboard() {
               <div onClick={() => setShowCreateModal(true)}>
                 <AdminAction icon={<FilePlus className="h-5 w-5 text-emerald-600" />} label="Upload Challenge" description="Create a new challenge" bg="bg-emerald-100" />
               </div>
+              <div onClick={() => { fetchPlacementMaterials(); setShowPlacementModal(true); }}>
+                <AdminAction icon={<Briefcase className="h-5 w-5 text-purple-600" />} label="Manage Placements" description="Upload prep materials" bg="bg-purple-100" />
+              </div>
               <div onClick={() => setShowUsersModal(true)}>
                 <AdminAction icon={<Users className="h-5 w-5 text-blue-600" />} label="Manage Users" description="View and manage roles" bg="bg-blue-100" />
               </div>
@@ -531,6 +538,88 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+  async function fetchPlacementMaterials() {
+    try {
+      const { data, error } = await supabase.from('placement_materials').select('*').order('created_at', { ascending: false })
+      if (data) setPlacementMaterials(data)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  async function handleAddPlacement(e) {
+    e.preventDefault()
+    try {
+      const { error } = await supabase.from('placement_materials').insert([newMaterial])
+      if (error) throw error
+      setNewMaterial({ company_name: '', drive_link: '', description: '' })
+      fetchPlacementMaterials()
+    } catch (err) {
+      console.error(err)
+      alert('Failed to add material')
+    }
+  }
+
+  async function handleDeletePlacement(id) {
+    if (!window.confirm("Are you sure?")) return
+    try {
+      const { error } = await supabase.from('placement_materials').delete().eq('id', id)
+      if (error) throw error
+      fetchPlacementMaterials()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  {/* Placement Modal */}
+  {showPlacementModal && (
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-slate-900">Manage Placement Materials</h3>
+          <button onClick={() => setShowPlacementModal(false)} className="text-slate-400 hover:text-slate-600"><X className="h-6 w-6" /></button>
+        </div>
+        
+        <form onSubmit={handleAddPlacement} className="space-y-4 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200 shrink-0">
+          <h4 className="font-semibold text-slate-700">Add New Material</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <input type="text" placeholder="Company Name" required value={newMaterial.company_name} onChange={e => setNewMaterial({...newMaterial, company_name: e.target.value})} className="px-3 py-2 border rounded-lg" />
+            <input type="url" placeholder="Google Drive Link" required value={newMaterial.drive_link} onChange={e => setNewMaterial({...newMaterial, drive_link: e.target.value})} className="px-3 py-2 border rounded-lg" />
+            <input type="text" placeholder="Description" required value={newMaterial.description} onChange={e => setNewMaterial({...newMaterial, description: e.target.value})} className="col-span-2 px-3 py-2 border rounded-lg" />
+          </div>
+          <button type="submit" className="w-full py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700">Add Material</button>
+        </form>
+
+        <div className="overflow-y-auto flex-1 border rounded-xl">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 border-b">
+              <tr>
+                <th className="p-3 font-semibold text-slate-600">Company</th>
+                <th className="p-3 font-semibold text-slate-600">Link</th>
+                <th className="p-3 font-semibold text-slate-600 w-16">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {placementMaterials.map(m => (
+                <tr key={m.id} className="border-b">
+                  <td className="p-3 font-medium">{m.company_name}</td>
+                  <td className="p-3 text-blue-600 truncate max-w-[200px]"><a href={m.drive_link} target="_blank" rel="noreferrer">{m.drive_link}</a></td>
+                  <td className="p-3">
+                    <button onClick={() => handleDeletePlacement(m.id)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
+                  </td>
+                </tr>
+              ))}
+              {placementMaterials.length === 0 && (
+                <tr><td colSpan="3" className="p-4 text-center text-slate-500">No materials found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )}
+
 
       {/* Platform Settings Modal */}
       {showSettingsModal && (

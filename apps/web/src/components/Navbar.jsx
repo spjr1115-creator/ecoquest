@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Leaf, LogOut, User, Trophy, BookOpen, Target, CheckCircle } from 'lucide-react'
+
+import { Leaf, LogOut, User, Trophy, BookOpen, Target, CheckCircle, Briefcase } from 'lucide-react'
 
 export default function Navbar() {
   const { currentUser, userRole, logout } = useAuth()
@@ -55,6 +56,13 @@ export default function Navbar() {
                   >
                     <Trophy className="h-5 w-5" />
                     <span className="hidden sm:inline">Leaderboard</span>
+                  </Link>
+                  <Link
+                    to="/placement-prep"
+                    className="flex items-center space-x-1 text-slate-600 hover:text-green-600 transition-colors"
+                  >
+                    <Briefcase className="h-5 w-5" />
+                    <span className="hidden sm:inline">Placement Prep</span>
                   </Link>
                 </>
               )}
@@ -130,3 +138,4 @@ export default function Navbar() {
     </nav>
   )
 }
+

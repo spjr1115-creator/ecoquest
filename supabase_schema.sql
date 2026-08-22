@@ -462,3 +462,52 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.admin_delete_user(UUID) TO authenticated;
+
+-- ==========================================
+-- Placement Portal Feature
+-- ==========================================
+
+-- 6. Placement Materials Table (Google Drive links)
+CREATE TABLE IF NOT EXISTS public.placement_materials (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_name TEXT NOT NULL,
+  drive_link TEXT NOT NULL,
+  icon_url TEXT,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. User Purchases Table (To track who paid 199 INR)
+CREATE TABLE IF NOT EXISTS public.user_purchases (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  amount_inr INTEGER NOT NULL DEFAULT 199,
+  razorpay_order_id TEXT,
+  razorpay_payment_id TEXT,
+  status TEXT DEFAULT 'pending',
+  purchased_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+
+-- Seed Placement Materials
+INSERT INTO public.placement_materials (company_name, drive_link, description) VALUES
+  ('ZOHO', 'https://drive.google.com/drive/folders/mock-zoho-link', 'Previous year questions and interview experiences for ZOHO.'),
+  ('TCS', 'https://drive.google.com/drive/folders/mock-tcs-link', 'TCS NQT preparation materials, coding questions, and aptitude.'),
+  ('WIPRO', 'https://drive.google.com/drive/folders/mock-wipro-link', 'Wipro Elite NLTH resources and mock tests.'),
+  ('TECH MAHINDRA', 'https://drive.google.com/drive/folders/mock-techm-link', 'Technical and HR interview preparation for Tech Mahindra.'),
+  ('ZenQ', 'https://drive.google.com/drive/folders/mock-zenq-link', 'Testing and QA interview resources for ZenQ.'),
+  ('ZENPACT', 'https://drive.google.com/drive/folders/mock-zenpact-link', 'Genpact/Zenpact resources.')
+ON CONFLICT DO NOTHING;
+
+-- RLS for Placement Materials
+ALTER TABLE public.placement_materials ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can read placement materials" ON public.placement_materials FOR SELECT USING (true);
+
+-- RLS for User Purchases
+ALTER TABLE public.user_purchases ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view their own purchases" ON public.user_purchases FOR SELECT USING (auth.uid() = user_id);
+
+-- RLS for Admins on Placement Materials
+CREATE POLICY "Admins can insert placement materials" ON public.placement_materials FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Admins can update placement materials" ON public.placement_materials FOR UPDATE USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Admins can delete placement materials" ON public.placement_materials FOR DELETE USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));

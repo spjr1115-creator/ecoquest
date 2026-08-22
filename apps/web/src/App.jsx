@@ -14,6 +14,7 @@ import Profile from './pages/Profile'
 import ChallengeDetail from './pages/ChallengeDetail'
 import Approvals from './pages/Approvals'
 import LessonDetail from './pages/LessonDetail'
+import PlacementPortal from './pages/PlacementPortal'
 
 function LoadingScreen() {
   return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600" /></div>
@@ -88,6 +89,7 @@ function App() {
             <Route path="/challenges" element={<ProtectedRoute allowedRoles={['student']}><Challenges /></ProtectedRoute>} />
             <Route path="/challenges/:id" element={<ProtectedRoute allowedRoles={['student']}><ChallengeDetail /></ProtectedRoute>} />
             <Route path="/leaderboard" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><Leaderboard /></ProtectedRoute>} />
+            <Route path="/placement-prep" element={<ProtectedRoute allowedRoles={['student']}><PlacementPortal /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -98,3 +100,4 @@ function App() {
 }
 
 export default App
+
